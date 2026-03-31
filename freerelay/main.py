@@ -51,6 +51,7 @@ def _build_engine(settings: Settings) -> RoutingEngine:
     from freerelay.providers.openrouter import OpenRouterProvider
     from freerelay.providers.together import TogetherProvider
     from freerelay.providers.mistral import MistralProvider
+    from freerelay.providers.nvidia import NVIDIAProvider
 
     engine = RoutingEngine(settings)
     keys = settings.keys
@@ -63,6 +64,7 @@ def _build_engine(settings: Settings) -> RoutingEngine:
         (OpenRouterProvider, keys.openrouter_api_key, None),
         (TogetherProvider, keys.together_api_key, None),
         (MistralProvider, keys.mistral_api_key, None),
+        (NVIDIAProvider, keys.nvidia_api_key, None),
     ]
 
     paid_providers: list[tuple[type, str, int | None]] = []

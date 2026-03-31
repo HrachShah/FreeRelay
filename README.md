@@ -115,6 +115,7 @@ print(response.choices[0].message.content)
 | **OpenRouter** | llama-3.1, mistral-7b | 20 | 🔄 Most models |
 | **Together AI** | llama-3.1, qwen2 | 60 | 📦 Batch |
 | **Mistral** | mistral-small | — | 🇫🇷 Multilingual |
+| **NVIDIA** | llama-3.1, mixtral | 40 | 🎮 GPU optimized |
 
 ### Paid Tier
 
@@ -123,19 +124,99 @@ print(response.choices[0].message.content)
 | **OpenAI** | gpt-4o, gpt-4o-mini | 🌟 Best overall |
 | **Anthropic** | claude-3.5-sonnet | 📝 Long context |
 
+## 🔑 How to Get API Keys (Step by Step)
+
+### Groq (Free)
+
+1. Go to **https://console.groq.com/keys**
+2. Click **Sign Up** (or **Log In** if you have an account)
+3. Verify your email
+4. Click **Create API Key**
+5. Copy the key (starts with `gsk_...`)
+6. Add to `.env`: `GROQ_API_KEY=gsk_your_key_here`
+
+### Google AI Studio (Free)
+
+1. Go to **https://aistudio.google.com/apikey**
+2. Sign in with your Google account
+3. Click **Create API Key**
+4. Select a project (or create a new one)
+5. Copy the key
+6. Add to `.env`: `GOOGLE_AI_KEY=your_key_here`
+
+### OpenRouter (Free)
+
+1. Go to **https://openrouter.ai/keys**
+2. Click **Sign Up** (or **Log In**)
+3. Click **Create Key**
+4. Give it a name (e.g., "FreeRelay")
+5. Copy the key (starts with `sk-or-...`)
+6. Add to `.env`: `OPENROUTER_API_KEY=sk-or-your_key_here`
+
+### Together AI (Free)
+
+1. Go to **https://api.together.xyz**
+2. Click **Sign Up** or **Log In**
+3. Go to **Settings** → **API Keys**
+4. Click **Create new API key**
+5. Copy the key
+6. Add to `.env`: `TOGETHER_API_KEY=your_key_here`
+
+### Mistral AI (Free)
+
+1. Go to **https://console.mistral.ai/api-keys/**
+2. Sign up or log in
+3. Click **Create new key**
+4. Give it a name
+5. Copy the key
+6. Add to `.env`: `MISTRAL_API_KEY=your_key_here`
+
+### NVIDIA Build (Free)
+
+1. Go to **https://build.nvidia.com/explore/recommended**
+2. Click **Sign Up** (or **Log In**)
+3. Go to **Settings** → **API Keys**
+4. Click **Generate API Key**
+5. Copy the key (starts with `nvapi-...`)
+6. Add to `.env`: `NVIDIA_API_KEY=nvapi-your_key_here`
+
+### OpenAI (Paid)
+
+1. Go to **https://platform.openai.com/api-keys**
+2. Sign up or log in
+3. Click **Create new secret key**
+4. Name it (e.g., "FreeRelay")
+5. Copy the key (starts with `sk-...`)
+6. Add to `.env`: `OPENAI_API_KEY=sk-your_key_here`
+
+### Anthropic (Paid)
+
+1. Go to **https://console.anthropic.com/settings/keys**
+2. Sign up or log in
+3. Click **Create Key**
+4. Name it (e.g., "FreeRelay")
+5. Copy the key (starts with `sk-ant-...`)
+6. Add to `.env`: `ANTHROPIC_API_KEY=sk-ant-your_key_here`
+
 ## Configuration
 
+After getting your API keys, edit `.env`:
+
 ```bash
-# .env file
-FREERELAY_MODE=auto           # free, paid, or auto
+# Mode: free, paid, or auto
+FREERELAY_MODE=auto
 
 # Free providers
-GROQ_API_KEY=sk-...
-GOOGLE_AI_KEY=...
+GROQ_API_KEY=gsk_your_key_here
+GOOGLE_AI_KEY=your_key_here
+OPENROUTER_API_KEY=sk-or_your_key_here
+TOGETHER_API_KEY=your_key_here
+MISTRAL_API_KEY=your_key_here
+NVIDIA_API_KEY=nvapi_your_key_here
 
 # Paid providers (optional)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-...
+OPENAI_API_KEY=sk_your_key_here
+ANTHROPIC_API_KEY=sk-ant_your_key_here
 ```
 
 ## Features That Set FreeRelay Apart

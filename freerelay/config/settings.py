@@ -23,6 +23,7 @@ class ProviderKeys(BaseSettings):
     openrouter_api_key: str = ""
     together_api_key: str = ""
     mistral_api_key: str = ""
+    nvidia_api_key: str = ""
 
     # Paid/premium API keys (optional)
     openai_api_key: str = ""
