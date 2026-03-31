@@ -7,14 +7,15 @@
 <h1 align="center">FreeRelay</h1>
 
 <p align="center">
-  <strong>The open-source AI gateway that turns fragmented free LLM tiers into production-grade infrastructure.</strong>
+  <strong>The open-source AI gateway that intelligently routes between free and paid LLMs.</strong>
 </p>
 
 <p align="center">
   <a href="https://github.com/HrachShah/FreeRelay/actions"><img src="https://img.shields.io/github/actions/workflow/status/HrachShah/FreeRelay/ci.yml?style=flat-square&label=CI" alt="CI"></a>
   <img src="https://img.shields.io/badge/python-3.12+-3776ab?style=flat-square" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License">
-  <img src="https://img.shields.io/badge/providers-5-8b5cf6?style=flat-square" alt="5 Providers">
+  <img src="https://img.shields.io/badge/free_providers-5-8b5cf6?style=flat-square" alt="5 Free Providers">
+  <img src="https://img.shields.io/badge/paid_providers-2-f59e0b?style=flat-square" alt="2 Paid Providers">
   <img src="https://img.shields.io/badge/openai_compatible-100%25-06b6d4?style=flat-square" alt="OpenAI Compatible">
 </p>
 
@@ -22,50 +23,54 @@
 
 ## The Problem
 
-- **Free AI tiers are fragmented.** Groq, Google AI Studio, OpenRouter, Together, Mistral — all have free tiers with different formats, different limits, different reliability. Managing them is painful.
-- **Rate limits break your app.** You hit a 429 and your entire pipeline stops. No automatic fallback. No recovery.
-- **Zero visibility.** No metrics, no traces, no way to understand why a request failed or where your tokens are going.
+- **Free AI tiers are fragmented.** Groq, Google AI Studio, OpenRouter, Together, Mistral — all have free tiers with different formats, limits, and reliability.
+- **Rate limits break your app.** You hit a 429 and your entire pipeline stops.
+- **No smart routing.** Simple tasks waste premium credits, complex tasks fail on free tiers.
 
 ## The Solution
 
-FreeRelay is a **self-hosted AI gateway** that aggregates every free-tier LLM provider into a single, reliable, OpenAI-compatible endpoint.
+FreeRelay is a **self-hosted AI gateway** that automatically chooses the best provider for each request.
 
-Point your app to `localhost:8000` instead of `api.openai.com`. **Zero code changes.**
+- **Free mode**: Uses only free providers (Groq, Google, OpenRouter, etc.)
+- **Paid mode**: Uses OpenAI, Anthropic for maximum quality
+- **Auto mode**: Free by default, intelligently switches to paid for complex tasks
 
 ```
 ┌────────────────┐       ┌────────────────────────────────────────┐
 │   Your App     │       │          FreeRelay Gateway             │
 │                │       │                                        │
-│  OpenAI SDK    │──────▶│  Intent Classification                │
-│  LangChain     │       │  Circuit Breakers (per provider)      │
-│  LlamaIndex    │       │  Budget Forecasting (EWMA)            │
-│  raw HTTP      │       │  Composite Scoring & Routing          │
-│                │       │  Streaming with Backpressure           │
-└────────────────┘       │  Prometheus Metrics + Structured Logs  │
-                         └──────┬──────────┬──────────┬──────────┘
-                                │          │          │
-                         ┌──────▼──┐ ┌─────▼───┐ ┌───▼─────────┐
-                         │  Groq   │ │ Google  │ │ OpenRouter  │
-                         │ 30 RPM  │ │ 15 RPM  │ │  20 RPM     │
-                         └─────────┘ └─────────┘ └─────────────┘
-                                          +Together +Mistral
+│  OpenAI SDK    │──────▶│  Task Complexity Detection            │
+│  LangChain     │       │  Smart Provider Routing               │
+│  raw HTTP      │       │  Circuit Breakers + Fallback          │
+│                │       │  Budget Forecasting                   │
+└────────────────┘       └─────────────┬──────────────────────────┘
+                                       │
+          ┌────────────────────────────┼────────────────────────────┐
+          │                            │                            │
+          ▼                            ▼                            ▼
+   ┌─────────────┐             ┌─────────────┐              ┌─────────────┐
+   │   FREE      │             │   FREE     │              │    PAID     │
+   │   tier      │             │   tier     │              │    tier     │
+   │  Groq       │             │  OpenAI    │              │  GPT-4      │
+   │  Google     │             │  Anthropic │              │  Claude     │
+   └─────────────┘             └─────────────┘              └─────────────┘
 ```
 
-## ⚡ Quick Start (One Command)
+## ⚡ Quick Start
 
 ```bash
-# Install & run - works out of the box with demo mode!
+# Install & run - works out of the box!
 pip install -e . && freerelay
 ```
 
-That's it! FreeRelay runs at `http://localhost:8000`.
+That's it! FreeRelay runs in **auto mode** at `http://localhost:8000`.
 
-**Want real AI? Add API keys:**
+### Guided Setup
+
 ```bash
+# Interactive setup to add API keys
 freerelay setup
 ```
-
-Or manually edit `.env` with keys from [Groq](https://console.groq.com/keys), [Google](https://aistudio.google.com/apikey), [OpenRouter](https://openrouter.ai/keys), etc.
 
 ### Test it
 
@@ -89,15 +94,49 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
+## Modes
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `free` | Only free providers | Budget-conscious apps |
+| `paid` | Only OpenAI/Anthropic | Maximum quality |
+| `auto` | Free + paid routing | **Recommended** - smart switching |
+
+**Auto mode** automatically routes complex tasks (deep analysis, coding, large context) to paid providers while keeping simple tasks on free tier.
+
 ## Supported Providers
 
-| Provider | Free Models | RPM | TPM | TPD | Speed |
-|----------|------------|-----|-----|-----|-------|
-| **Groq** | llama-3.1-8b, llama-3.1-70b, mixtral-8x7b, gemma2-9b | 30 | 6K | 500K | ⚡ Fastest |
-| **Google AI Studio** | gemini-1.5-flash, gemini-1.5-flash-8b, gemini-1.0-pro | 15 | 1M | ∞ | 🌐 Huge context |
-| **OpenRouter** | llama-3.1-8b, mistral-7b, many more | 20 | Varies | Varies | 🔄 Most models |
-| **Together AI** | llama-3.1-8b, llama-3.1-70b, qwen2-72b | 60 | — | — | 📦 Batch friendly |
-| **Mistral AI** | mistral-small | — | — | — | 🇫🇷 Multilingual |
+### Free Tier
+
+| Provider | Models | RPM | Best For |
+|----------|--------|-----|----------|
+| **Groq** | llama-3.1, mixtral-8x7b | 30 | ⚡ Speed |
+| **Google** | gemini-1.5-flash | 15 | 🌐 Large context |
+| **OpenRouter** | llama-3.1, mistral-7b | 20 | 🔄 Most models |
+| **Together AI** | llama-3.1, qwen2 | 60 | 📦 Batch |
+| **Mistral** | mistral-small | — | 🇫🇷 Multilingual |
+
+### Paid Tier
+
+| Provider | Models | Best For |
+|----------|--------|----------|
+| **OpenAI** | gpt-4o, gpt-4o-mini | 🌟 Best overall |
+| **Anthropic** | claude-3.5-sonnet | 📝 Long context |
+
+## Configuration
+
+```bash
+# .env file
+FREERELAY_MODE=auto           # free, paid, or auto
+
+# Free providers
+GROQ_API_KEY=sk-...
+GOOGLE_AI_KEY=...
+
+# Paid providers (optional)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-...
+```
 
 ## Features That Set FreeRelay Apart
 
