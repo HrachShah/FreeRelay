@@ -1,90 +1,158 @@
 """
-FreeRelay CLI — Typer-based command-line interface
-====================================================
-Commands: start, status, benchmark, flush-cache, chaos
+FreeRelay CLI — Simplified one-command experience
+===================================================
 """
 
 from __future__ import annotations
 
+import os
+import sys
+import webbrowser
+from pathlib import Path
+
 import typer
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
+from rich.prompt import Prompt
 
 app = typer.Typer(
     name="freerelay",
-    help="⚡ FreeRelay — Production AI gateway for free LLM tiers",
+    help="⚡ FreeRelay — AI gateway for free LLM tiers. Run [bold]freerelay[/bold] to start!",
     add_completion=False,
 )
 console = Console()
 
 
+def _setup_env_file() -> None:
+    """Create .env file with user input if it doesn't exist."""
+    env_path = Path(".env")
+
+    if env_path.exists():
+        return
+
+    console.print("[yellow]No .env file found. Let's set one up![/yellow]")
+    console.print(
+        "[dim]Get free API keys from: Groq | Google | OpenRouter | Together | Mistral[/dim]\n"
+    )
+
+    keys = {
+        "GROQ_API_KEY": "Groq (https://console.groq.com/keys)",
+        "GOOGLE_AI_KEY": "Google AI (https://aistudio.google.com/apikey)",
+        "OPENROUTER_API_KEY": "OpenRouter (https://openrouter.ai/keys)",
+        "TOGETHER_API_KEY": "Together AI (https://api.together.xyz)",
+        "MISTRAL_API_KEY": "Mistral (https://console.mistral.ai/api-keys)",
+    }
+
+    content = ["# FreeRelay Configuration\n"]
+    skip_keys = []
+
+    for key, desc in keys.items():
+        add_key = Prompt.ask(f"[cyan]Add {desc}?[y/N]", default="n")
+        if add_key.lower() == "y":
+            api_key = Prompt.obscurored(f"  Enter {key}:")
+            if api_key.strip():
+                content.append(f"{key}={api_key.strip()}\n")
+            else:
+                skip_keys.append(key)
+        else:
+            skip_keys.append(key)
+
+    if len(skip_keys) == len(keys):
+        console.print(
+            "\n[yellow]No API keys provided. Running in DEMO mode (no real LLM calls).[/yellow]"
+        )
+        console.print(
+            "[dim]You can still test the API. To use real LLMs, add keys later.[/dim]\n"
+        )
+
+    content.append("\n# Server settings\nFREERELAY_PORT=8000\n")
+
+    with open(env_path, "w") as f:
+        f.writelines(content)
+
+    console.print(f"[green]✓ Created .env file[/green]\n")
+
+
 @app.command()
 def start(
-    host: str = typer.Option("0.0.0.0", help="Bind address"),
-    port: int = typer.Option(8000, help="Port"),
-    reload: bool = typer.Option(False, help="Enable auto-reload for development"),
-    workers: int = typer.Option(1, help="Number of worker processes"),
-    chaos: bool = typer.Option(False, help="Enable chaos engineering mode"),
-    log_level: str = typer.Option("info", help="Log level"),
+    port: int = typer.Option(8000, help="Port to run on"),
+    demo: bool = typer.Option(False, help="Force demo mode (no API keys needed)"),
 ) -> None:
     """Start the FreeRelay AI gateway."""
-    import os
     import uvicorn
 
-    if chaos:
-        os.environ["FREERELAY_ENABLE_CHAOS"] = "true"
+    # Auto-setup .env if needed
+    if not Path(".env").exists():
+        _setup_env_file()
 
-    os.environ["FREERELAY_LOG_LEVEL"] = log_level.upper()
+    # Set port
+    os.environ["FREERELAY_PORT"] = str(port)
 
-    console.print(Panel.fit(
-        "[bold cyan]⚡ FreeRelay AI Gateway[/bold cyan]\n"
-        f"Starting on [green]http://{host}:{port}[/green]",
-        border_style="cyan",
-    ))
+    if demo:
+        os.environ["FREERELAY_DEMO_MODE"] = "true"
+
+    console.print(
+        Panel.fit(
+            "[bold cyan]⚡ FreeRelay AI Gateway[/bold cyan]\n"
+            f"Starting on [green]http://localhost:{port}[/green]\n"
+            f"[dim]API: http://localhost:{port}/v1/chat/completions[/dim]\n"
+            f"[dim]Docs: http://localhost:{port}/docs[/dim]",
+            border_style="cyan",
+        )
+    )
 
     uvicorn.run(
         "freerelay.main:app",
-        host=host,
+        host="0.0.0.0",
         port=port,
-        reload=reload,
-        workers=workers,
-        log_level=log_level.lower(),
+        reload=False,
+        log_level="info",
     )
+
+
+@app.command(name="run")
+def run(
+    port: int = typer.Option(8000, help="Port"),
+) -> None:
+    """Same as [bold]start[/bold] - runs the gateway."""
+    start(port=port)
+
+
+@app.command()
+def demo() -> None:
+    """Start FreeRelay in demo mode (works without API keys)."""
+    start(demo=True)
 
 
 @app.command()
 def status() -> None:
-    """Check FreeRelay server status and provider health."""
+    """Check provider status."""
     import httpx
 
     try:
         resp = httpx.get("http://localhost:8000/v1/stats", timeout=5)
         data = resp.json()
     except Exception:
-        console.print("[red]✗ Cannot connect to FreeRelay at localhost:8000[/red]")
+        console.print("[red]✗ FreeRelay not running. Start with: freerelay[/red]")
         raise typer.Exit(1)
 
-    table = Table(title="⚡ FreeRelay Provider Status")
+    from rich.table import Table
+
+    table = Table(title="⚡ FreeRelay Status")
     table.add_column("Provider", style="cyan")
-    table.add_column("Circuit", style="white")
-    table.add_column("Score", justify="right", style="green")
+    table.add_column("Status", style="white")
     table.add_column("Requests", justify="right")
-    table.add_column("Errors", justify="right", style="red")
-    table.add_column("p95 Latency", justify="right")
 
     for p in data.get("providers", []):
-        circuit = p.get("circuit", {})
-        state = circuit.get("state", "?")
-        state_color = {"CLOSED": "green", "HALF_OPEN": "yellow", "OPEN": "red"}.get(state, "white")
+        state = p.get("circuit", {}).get("state", "?")
+        color = {"CLOSED": "green", "HALF_OPEN": "yellow", "OPEN": "red"}.get(
+            state, "white"
+        )
 
         table.add_row(
             p["name"],
-            f"[{state_color}]{state}[/{state_color}]",
-            f"{p.get('score', 0):.4f}",
+            f"[{color}]{state}[/{color}]",
             str(p.get("request_count", 0)),
-            str(p.get("error_count", 0)),
-            f"{p.get('latency_p95_ms', 0):.0f}ms",
         )
 
     console.print(table)
@@ -92,87 +160,80 @@ def status() -> None:
 
 @app.command()
 def benchmark(
-    requests: int = typer.Option(20, help="Number of requests to send"),
-    concurrent: int = typer.Option(5, help="Concurrent requests"),
+    requests: int = typer.Option(10, "-n", help="Number of requests"),
+    concurrent: int = typer.Option(3, "-c", help="Concurrent requests"),
 ) -> None:
-    """Run a quick benchmark against the local FreeRelay instance."""
+    """Run a quick benchmark."""
     import asyncio
     import time
     import httpx
 
-    async def _run() -> None:
-        payload = {
-            "messages": [{"role": "user", "content": "Say hello in one word."}],
-            "max_tokens": 10,
-        }
+    payload = {
+        "messages": [{"role": "user", "content": "Say hello in 3 words or less."}],
+        "max_tokens": 10,
+    }
 
-        latencies: list[float] = []
-        errors = 0
+    async def run() -> None:
+        latencies = []
 
-        sem = asyncio.Semaphore(concurrent)
+        async with httpx.AsyncClient() as client:
 
-        async def _single(client: httpx.AsyncClient) -> None:
-            nonlocal errors
-            async with sem:
+            async def send():
                 start = time.time()
                 try:
-                    resp = await client.post(
+                    r = await client.post(
                         "http://localhost:8000/v1/chat/completions",
                         json=payload,
                         timeout=30,
                     )
-                    elapsed = (time.time() - start) * 1000
-                    if resp.status_code == 200:
-                        latencies.append(elapsed)
-                    else:
-                        errors += 1
+                    if r.status_code == 200:
+                        latencies.append((time.time() - start) * 1000)
                 except Exception:
-                    errors += 1
+                    pass
 
-        async with httpx.AsyncClient() as client:
-            tasks = [_single(client) for _ in range(requests)]
-            await asyncio.gather(*tasks)
+            await asyncio.gather(*[send() for _ in range(requests)])
 
         if latencies:
-            sorted_l = sorted(latencies)
-            p50 = sorted_l[len(sorted_l) // 2]
-            p95 = sorted_l[int(len(sorted_l) * 0.95)]
-            p99 = sorted_l[int(len(sorted_l) * 0.99)]
+            latencies.sort()
+            p50 = latencies[len(latencies) // 2]
+            p95 = latencies[int(len(latencies) * 0.95)]
 
-            console.print(Panel.fit(
-                f"[bold]Benchmark Results[/bold]\n\n"
-                f"Total:    {requests} requests\n"
-                f"Success:  {len(latencies)}\n"
-                f"Errors:   {errors}\n"
-                f"p50:      {p50:.0f}ms\n"
-                f"p95:      {p95:.0f}ms\n"
-                f"p99:      {p99:.0f}ms\n"
-                f"Mean:     {sum(latencies)/len(latencies):.0f}ms",
-                border_style="green",
-            ))
+            console.print(
+                Panel.fit(
+                    f"[bold]Benchmark Results[/bold]\n\n"
+                    f"Requests:  {requests}\n"
+                    f"Success:   {len(latencies)}\n"
+                    f"p50:       {p50:.0f}ms\n"
+                    f"p95:       {p95:.0f}ms",
+                    border_style="green",
+                )
+            )
         else:
-            console.print("[red]All requests failed[/red]")
+            console.print("[red]No successful requests. Is FreeRelay running?[/red]")
 
-    asyncio.run(_run())
-
-
-@app.command(name="flush-cache")
-def flush_cache() -> None:
-    """Flush the semantic cache."""
-    console.print("[yellow]Cache flush not yet implemented (requires Redis)[/yellow]")
+    asyncio.run(run())
 
 
 @app.command()
-def chaos(
-    intensity: float = typer.Option(0.3, help="Chaos intensity 0.0-1.0"),
-) -> None:
-    """Start FreeRelay with chaos engineering enabled."""
-    import os
-    os.environ["FREERELAY_ENABLE_CHAOS"] = "true"
-    os.environ["FREERELAY_CHAOS_INTENSITY"] = str(intensity)
+def open_dashboard() -> None:
+    """Open the dashboard in browser."""
+    webbrowser.open("http://localhost:8000/dashboard")
 
-    console.print(f"[red bold]🔥 CHAOS MODE — intensity {intensity}[/red bold]")
-    start(chaos=True)
+
+@app.command()
+def setup() -> None:
+    """Setup .env file with API keys."""
+    _setup_env_file()
+    console.print(
+        "[green]✓ Setup complete! Run [bold]freerelay[/bold] to start.[/green]"
+    )
+
+
+# Default command - just run "freerelay" without any subcommand
+@app.command()
+def main() -> None:
+    """Start FreeRelay (default command)."""
+    start()
 
 
 if __name__ == "__main__":

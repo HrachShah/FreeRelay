@@ -51,21 +51,21 @@ Point your app to `localhost:8000` instead of `api.openai.com`. **Zero code chan
                                           +Together +Mistral
 ```
 
-## 30-Second Quick Start
+## ⚡ Quick Start (One Command)
 
 ```bash
-# Install
-pip install -r requirements.txt
-
-# Configure (add at least one API key)
-cp .env.example .env
-# Edit .env and paste your free API key(s)
-
-# Run
-python -m freerelay.main
+# Install & run - works out of the box with demo mode!
+pip install -e . && freerelay
 ```
 
-That's it. FreeRelay is running at `http://localhost:8000`.
+That's it! FreeRelay runs at `http://localhost:8000`.
+
+**Want real AI? Add API keys:**
+```bash
+freerelay setup
+```
+
+Or manually edit `.env` with keys from [Groq](https://console.groq.com/keys), [Google](https://aistudio.google.com/apikey), [OpenRouter](https://openrouter.ai/keys), etc.
 
 ### Test it
 
@@ -75,7 +75,7 @@ curl http://localhost:8000/v1/chat/completions \
   -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
-### Use with the OpenAI Python SDK
+### Use with OpenAI SDK
 
 ```python
 from openai import OpenAI

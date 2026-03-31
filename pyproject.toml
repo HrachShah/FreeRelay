@@ -43,7 +43,7 @@ dev = [
 ]
 
 [project.scripts]
-freerelay = "freerelay.cli.main:app"
+freerelay = "freerelay.cli.main:main"
 
 [tool.mypy]
 strict = true

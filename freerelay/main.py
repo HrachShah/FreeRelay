@@ -64,6 +64,7 @@ def _build_engine(settings: Settings) -> RoutingEngine:
         (MistralProvider, keys.mistral_api_key, None),
     ]
 
+    has_real_provider = False
     for provider_cls, api_key, daily_limit in provider_configs:
         if api_key:
             engine.register_provider(
@@ -71,6 +72,18 @@ def _build_engine(settings: Settings) -> RoutingEngine:
                 api_key=api_key,
                 daily_limit=daily_limit,
             )
+            has_real_provider = True
+
+    # If no API keys configured, add demo provider for testing
+    if not has_real_provider:
+        from freerelay.providers.demo import DemoProvider
+
+        engine.register_provider(
+            provider=DemoProvider(),
+            api_key="demo",
+            daily_limit=1000,
+        )
+        logger.info("Running in DEMO mode (no API keys configured)")
 
     return engine
 
