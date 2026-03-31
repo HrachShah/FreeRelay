@@ -1,0 +1,29 @@
+version: 1
+name: default
+description: Single-shot generation with schema validation.
+
+nodes:
+  - id: generate
+    type: generate
+    provider_pool: default_pool
+    fanout: 1
+    inputs: [request, profile]
+    outputs: [candidate]
+
+  - id: validate
+    type: validate
+    validators: [schema]
+    inputs: [candidate]
+    outputs: [validated]
+
+  - id: select
+    type: select
+    method: best_first
+    inputs: [validated]
+    outputs: [winner]
+
+edges:
+  - from: generate
+    to: validate
+  - from: validate
+    to: select

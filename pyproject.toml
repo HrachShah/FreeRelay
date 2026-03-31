@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "freerelay"
+version = "0.1.0"
+description = "Production-grade AI gateway for free LLM tiers"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
+  "httpx>=0.27",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "pyyaml>=6.0",
+  "structlog>=24.1",
+  "typer>=0.12",
+  "rich>=13.7",
+  "tiktoken>=0.7",
+]
+
+[project.optional-dependencies]
+redis = ["redis[asyncio]>=5.0"]
+observability = [
+  "opentelemetry-sdk>=1.24",
+  "opentelemetry-exporter-otlp>=1.24",
+  "prometheus-client>=0.20",
+]
+cache = ["datasketch>=1.6"]
+plugins = ["watchdog>=4.0"]
+all = ["freerelay[redis,observability,cache,plugins]"]
+dev = [
+  "freerelay[all]",
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "respx>=0.21",
+  "mypy>=1.10",
+  "ruff>=0.4",
+  "locust>=2.29",
+]
+
+[project.scripts]
+freerelay = "freerelay.cli.main:app"
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

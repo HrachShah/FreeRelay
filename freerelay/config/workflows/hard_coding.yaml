@@ -1,0 +1,54 @@
+version: 1
+name: hard_coding
+description: Fanout + verify + repair + judge for precision-sensitive coding.
+
+nodes:
+  - id: generate
+    type: generate
+    provider_pool: coding_pool
+    fanout: 3
+    inputs: [request, profile]
+    outputs: [candidates]
+
+  - id: validate
+    type: validate
+    validators: [schema, ast, tests]
+    inputs: [candidates]
+    outputs: [validated]
+
+  - id: repair
+    type: repair
+    max_attempts: 4
+    strategy: escalation
+    inputs: [validated]
+    outputs: [repaired]
+
+  - id: judge
+    type: judge
+    async: true
+    inputs: [repaired]
+    outputs: [scores]
+
+  - id: select
+    type: select
+    method: confidence_weighted
+    inputs: [repaired, scores]
+    outputs: [winner]
+
+edges:
+  - from: generate
+    to: validate
+  - from: validate
+    to: repair
+    when: validation_failed
+  - from: validate
+    to: select
+    when: validation_passed
+  - from: repair
+    to: validate
+    when: repair_attempted
+  - from: repair
+    to: judge
+    when: repair_succeeded
+  - from: judge
+    to: select

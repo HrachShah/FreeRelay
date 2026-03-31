@@ -1,0 +1,166 @@
+# FreeRelay — Capability Matrix (§14.2)
+# Provider/model capability database for intelligent routing.
+
+models:
+  groq/llama-3.1-70b-versatile:
+    provider: groq
+    context_window: 131072
+    strengths: [reasoning, coding, instruction_following]
+    weaknesses: [math, multilingual]
+    speed_tier: fast
+    quality_tier: high
+    supports_streaming: true
+    supports_tools: false
+    supports_vision: false
+    supports_json_mode: true
+    supports_logprobs: false
+    free_tier:
+      rpm: 30
+      tpm: 6000
+      tpd: 500000
+
+  groq/llama-3.1-8b-instant:
+    provider: groq
+    context_window: 131072
+    strengths: [speed, simple_chat]
+    weaknesses: [reasoning, coding]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    free_tier:
+      rpm: 30
+      tpm: 6000
+      tpd: 500000
+
+  groq/mixtral-8x7b-32768:
+    provider: groq
+    context_window: 32768
+    strengths: [multilingual, reasoning]
+    weaknesses: [speed]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    free_tier:
+      rpm: 30
+      tpm: 6000
+      tpd: 500000
+
+  groq/gemma2-9b-it:
+    provider: groq
+    context_window: 8192
+    strengths: [simple_chat, speed]
+    weaknesses: [long_context]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    free_tier:
+      rpm: 30
+      tpm: 6000
+      tpd: 500000
+
+  google/gemini-1.5-flash:
+    provider: google
+    context_window: 1048576
+    strengths: [long_context, multilingual, vision, reasoning]
+    weaknesses: [speed]
+    speed_tier: medium
+    quality_tier: high
+    supports_streaming: true
+    supports_vision: true
+    supports_json_mode: true
+    free_tier:
+      rpm: 15
+      tpm: 1000000
+      tpd: null  # unlimited
+
+  google/gemini-1.5-flash-8b:
+    provider: google
+    context_window: 1048576
+    strengths: [long_context, speed]
+    weaknesses: [reasoning]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    free_tier:
+      rpm: 15
+      tpm: 1000000
+      tpd: null
+
+  google/gemini-1.0-pro:
+    provider: google
+    context_window: 32768
+    strengths: [reasoning, multilingual]
+    weaknesses: [speed, vision]
+    speed_tier: medium
+    quality_tier: high
+    supports_streaming: true
+    free_tier:
+      rpm: 15
+      tpm: 1000000
+      tpd: null
+
+  openrouter/meta-llama/llama-3.1-8b-instruct:free:
+    provider: openrouter
+    context_window: 131072
+    strengths: [speed, simple_chat]
+    weaknesses: [reasoning]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    supports_tools: true
+    free_tier:
+      rpm: 20
+      tpm: null
+      tpd: null
+
+  openrouter/mistralai/mistral-7b-instruct:free:
+    provider: openrouter
+    context_window: 32768
+    strengths: [multilingual, speed]
+    weaknesses: [coding]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    free_tier:
+      rpm: 20
+      tpm: null
+      tpd: null
+
+  together/meta-llama/Llama-3.1-8B-Instruct-Turbo:
+    provider: together
+    context_window: 131072
+    strengths: [speed, simple_chat]
+    weaknesses: [reasoning]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    free_tier:
+      rpm: 60
+      tpm: null
+      tpd: null
+
+  together/meta-llama/Llama-3.1-70B-Instruct-Turbo:
+    provider: together
+    context_window: 131072
+    strengths: [reasoning, coding]
+    weaknesses: []
+    speed_tier: medium
+    quality_tier: high
+    supports_streaming: true
+    free_tier:
+      rpm: 60
+      tpm: null
+      tpd: null
+
+  mistral/mistral-small-latest:
+    provider: mistral
+    context_window: 32768
+    strengths: [multilingual, speed]
+    weaknesses: [reasoning, coding]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    free_tier:
+      rpm: null
+      tpm: null
+      tpd: null

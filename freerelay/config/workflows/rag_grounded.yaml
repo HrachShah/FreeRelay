@@ -1,0 +1,50 @@
+version: 1
+name: rag_grounded
+description: Single-shot RAG with groundedness verification.
+
+nodes:
+  - id: retrieve
+    type: tool
+    tool: retriever
+    inputs: [request]
+    outputs: [documents]
+
+  - id: generate
+    type: generate
+    provider_pool: rag_pool
+    fanout: 1
+    inputs: [request, documents, profile]
+    outputs: [candidate]
+
+  - id: validate
+    type: validate
+    validators: [schema, groundedness]
+    inputs: [candidate, documents]
+    outputs: [validated]
+
+  - id: repair
+    type: repair
+    max_attempts: 3
+    strategy: structured
+    inputs: [validated]
+    outputs: [repaired]
+
+  - id: select
+    type: select
+    method: best_first
+    inputs: [repaired]
+    outputs: [winner]
+
+edges:
+  - from: retrieve
+    to: generate
+  - from: generate
+    to: validate
+  - from: validate
+    to: repair
+    when: validation_failed
+  - from: validate
+    to: select
+    when: validation_passed
+  - from: repair
+    to: select

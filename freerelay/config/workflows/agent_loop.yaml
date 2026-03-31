@@ -1,0 +1,45 @@
+version: 1
+name: agent_loop
+description: Planner/executor loop with approval gates and replay.
+
+nodes:
+  - id: plan
+    type: generate
+    provider_pool: planner_pool
+    fanout: 1
+    inputs: [request, profile]
+    outputs: [plan]
+
+  - id: approve
+    type: gate
+    mode: human
+    inputs: [plan]
+    outputs: [approved_plan]
+
+  - id: execute
+    type: tool
+    tool: executor
+    inputs: [approved_plan]
+    outputs: [tool_output]
+
+  - id: validate
+    type: validate
+    validators: [schema, tool_consistency]
+    inputs: [tool_output]
+    outputs: [validated]
+
+  - id: select
+    type: select
+    method: best_first
+    inputs: [validated]
+    outputs: [winner]
+
+edges:
+  - from: plan
+    to: approve
+  - from: approve
+    to: execute
+  - from: execute
+    to: validate
+  - from: validate
+    to: select

@@ -1,0 +1,81 @@
+"""
+FreeRelay — Hedged Execution (§13)
+====================================
+Speculative parallel execution with early cancellation.
+Fire the same request at top 2 providers simultaneously.
+Return whichever responds first. Cancel the other.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+
+from freerelay.core.models.openai import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+)
+from freerelay.providers.base import BaseProvider
+
+logger = logging.getLogger("freerelay.hedging")
+
+
+async def hedged_execute(
+    providers: list[tuple[BaseProvider, str]],
+    request: ChatCompletionRequest,
+) -> ChatCompletionResponse:
+    """
+    Fire the same request at up to 2 providers in parallel.
+    Return the first response. Cancel all others.
+
+    Args:
+        providers: List of (provider, api_key) tuples, max 2.
+        request: The chat completion request.
+
+    Returns:
+        Response from the fastest provider.
+
+    Raises:
+        Exception: If all providers fail.
+    """
+    if not providers:
+        raise ValueError("No providers for hedged execution")
+
+    # Limit to 2 providers
+    targets = providers[:2]
+
+    tasks: dict[asyncio.Task[ChatCompletionResponse], BaseProvider] = {
+        asyncio.create_task(
+            provider.complete(request, api_key)
+        ): provider
+        for provider, api_key in targets
+    }
+
+    done, pending = await asyncio.wait(
+        tasks.keys(),
+        return_when=asyncio.FIRST_COMPLETED,
+    )
+
+    # Cancel all pending tasks immediately
+    for task in pending:
+        task.cancel()
+        try:
+            await task
+        except (asyncio.CancelledError, Exception):
+            pass
+
+    # Get the first result
+    result_task = done.pop()
+    winner = tasks[result_task]
+
+    if result_task.exception():
+        # If the winner also failed, check if there are other done tasks
+        for other in done:
+            if not other.exception():
+                logger.info("Hedged fallback to %s", tasks[other].name)
+                return other.result()
+        # All failed
+        raise result_task.exception()  # type: ignore[misc]
+
+    logger.info("Hedged winner: %s", winner.name)
+    return result_task.result()

@@ -1,0 +1,71 @@
+# FreeRelay — Docker Compose Stack (§19)
+# FreeRelay + Redis + Jaeger + Prometheus + Grafana
+
+version: "3.9"
+
+services:
+  freerelay:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+      - "9090:9090"
+    environment:
+      - FREERELAY_ENABLE_REDIS=true
+      - FREERELAY_REDIS_URL=redis://redis:6379
+      - FREERELAY_ENABLE_TELEMETRY=true
+      - FREERELAY_OTEL_ENDPOINT=http://jaeger:4317
+      - FREERELAY_ENABLE_PROMETHEUS=true
+      - FREERELAY_LOG_FORMAT=json
+    env_file:
+      - ../.env
+    depends_on:
+      - redis
+    volumes:
+      - ~/.freerelay/plugins:/home/freerelay/.freerelay/plugins:ro
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=freerelay
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  prometheus_data:
+  grafana_data:

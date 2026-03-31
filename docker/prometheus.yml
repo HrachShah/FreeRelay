@@ -1,0 +1,9 @@
+# Prometheus config for FreeRelay
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "freerelay"
+    static_configs:
+      - targets: ["freerelay:8000"]
+    metrics_path: "/metrics"

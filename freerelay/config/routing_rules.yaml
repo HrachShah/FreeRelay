@@ -1,0 +1,30 @@
+version: 1
+
+rules:
+  - name: high_precision_coding
+    condition: "workload.task_family == 'coding' and workload.precision_sensitivity == 'high'"
+    actions:
+      - prefer: [groq/llama-3.1-70b-versatile, google/gemini-1.5-flash]
+      - validators: [schema, tests]
+      - require_hedging: verification
+      - fanout: 3
+      - enforce_mode: json
+      - policy_weight: 1.2
+    fallback: any
+
+  - name: async_batch_workflow
+    condition: "workload.latency_class == 'batch' and tenant.tier != 'bronze'"
+    actions:
+      - prefer: [together/meta-llama/Llama-3.1-70B-Instruct-Turbo, mistral/mistral-small]
+      - fanout: 2
+      - policy_weight: 0.9
+    fallback: any
+
+  - name: locked_down_tool_use
+    condition: "workload.tool_dependence == 'mandatory' and workload.safety_posture == 'locked_down'"
+    actions:
+      - require: [openrouter/meta-llama/llama-3.1-8b-instruct:tools]
+      - enforce_mode: json
+      - human_gate: true
+      - policy_weight: 1.5
+    fallback: none

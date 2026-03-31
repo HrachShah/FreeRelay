@@ -1,0 +1,1 @@
+"""FreeRelay CLI."""

@@ -1,0 +1,89 @@
+# FreeRelay Nightly Benchmark (§20)
+name: Benchmark
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC nightly
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Start FreeRelay
+        run: |
+          python -m freerelay.main &
+          sleep 5
+        env:
+          FREERELAY_LOG_LEVEL: INFO
+
+      - name: Run benchmark
+        run: |
+          python -c "
+          import asyncio
+          import time
+          import httpx
+          import json
+
+          async def benchmark():
+              latencies = []
+              errors = 0
+              payload = {'messages': [{'role': 'user', 'content': 'Say hello.'}], 'max_tokens': 10}
+
+              async with httpx.AsyncClient() as client:
+                  for i in range(50):
+                      start = time.time()
+                      try:
+                          resp = await client.post(
+                              'http://localhost:8000/v1/chat/completions',
+                              json=payload,
+                              timeout=30,
+                          )
+                          elapsed = (time.time() - start) * 1000
+                          if resp.status_code == 200:
+                              latencies.append(elapsed)
+                          else:
+                              errors += 1
+                      except Exception:
+                          errors += 1
+
+              if latencies:
+                  latencies.sort()
+                  p50 = latencies[len(latencies) // 2]
+                  p95 = latencies[int(len(latencies) * 0.95)]
+                  p99 = latencies[int(len(latencies) * 0.99)]
+                  print(json.dumps({
+                      'total': 50,
+                      'success': len(latencies),
+                      'errors': errors,
+                      'p50_ms': round(p50, 1),
+                      'p95_ms': round(p95, 1),
+                      'p99_ms': round(p99, 1),
+                      'mean_ms': round(sum(latencies) / len(latencies), 1),
+                  }, indent=2))
+              else:
+                  print('All requests failed')
+
+          asyncio.run(benchmark())
+          "
+
+      - name: Store results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark-*.json

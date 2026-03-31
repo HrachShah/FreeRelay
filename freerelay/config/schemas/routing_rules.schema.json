@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FreeRelay Routing Rules",
+  "description": "Schema for routing_rules.yaml configuration",
+  "type": "object",
+  "required": ["version", "rules"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "DSL version (must be 1)"
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "condition", "prefer"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique rule name"
+          },
+          "condition": {
+            "type": "string",
+            "description": "Condition expression (e.g., \"intent == 'coding'\")"
+          },
+          "prefer": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Preferred provider/model IDs"
+          },
+          "fallback": {
+            "type": "string",
+            "enum": ["any", "none"],
+            "default": "any",
+            "description": "Fallback behavior when no preferred providers available"
+          }
+        }
+      }
+    }
+  }
+}
