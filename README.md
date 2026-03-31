@@ -60,7 +60,7 @@ FreeRelay is a **self-hosted AI gateway** that automatically chooses the best pr
 
 ```bash
 # Install & run - works out of the box!
-pip install -e . && freerelay
+pip install -e .; freerelay
 ```
 
 That's it! FreeRelay runs in **auto mode** at `http://localhost:8000`.
