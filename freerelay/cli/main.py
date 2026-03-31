@@ -124,8 +124,8 @@ def _setup_env_interactive() -> None:
 
 @app.command()
 def start(
-    port: int = typer.Argument(8000, help="Port to run on"),
-    demo: bool = typer.Option(False, help="Force demo mode"),
+    port: int = 8000,
+    demo: bool = False,
 ) -> None:
     """Start the FreeRelay AI gateway."""
     import uvicorn
@@ -161,10 +161,10 @@ def start(
 
 @app.command(name="run")
 def run(
-    port: int = typer.Option(8000, help="Port"),
+    port: int = 8000,
 ) -> None:
-    """Same as [bold]start[/bold] - runs the gateway."""
-    start(port=port)
+    """Same as start - runs the gateway."""
+    start(port=port, demo=False)
 
 
 @app.command()
@@ -280,7 +280,7 @@ def setup() -> None:
 @app.command()
 def main() -> None:
     """Start FreeRelay (default command)."""
-    start()
+    start(port=8000, demo=False)
 
 
 if __name__ == "__main__":

@@ -196,7 +196,7 @@ class RoutingEngine:
         )
         if daily_limit is not None:
             self.budget.set_daily_limit(provider.name, daily_limit)
-        logger.info(f"Registered provider: {provider.name} (tier: {tier}) ✓")
+        logger.info(f"Registered provider: {provider.name} (tier: {tier})")
 
     def _prepare_context(self, request: ChatCompletionRequest) -> RequestContext:
         profile = self.profiler.profile(request)
