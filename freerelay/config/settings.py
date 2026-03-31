@@ -24,6 +24,10 @@ class ProviderKeys(BaseSettings):
     together_api_key: str = ""
     mistral_api_key: str = ""
 
+    # Paid/premium API keys (optional)
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
+
 
 class Settings(BaseSettings):
     """Master settings for FreeRelay."""
@@ -31,6 +35,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_prefix="FREERELAY_", extra="ignore"
     )
+
+    # ── Mode ─────────────────────────────────────────────────
+    mode: str = "auto"  # "free", "paid", "auto" (auto = use free if available, paid if no free keys)
 
     # ── Server ────────────────────────────────────────────
     host: str = "0.0.0.0"

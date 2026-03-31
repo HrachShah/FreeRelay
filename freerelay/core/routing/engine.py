@@ -44,6 +44,7 @@ class ProviderSlot:
     provider: BaseProvider
     api_key: str
     circuit: CircuitBreaker
+    tier: str = "free"  # "free" or "paid"
     latency_p95_ms: float = 1000.0
     request_count: int = 0
     error_count: int = 0
@@ -177,6 +178,7 @@ class RoutingEngine:
         provider: BaseProvider,
         api_key: str,
         daily_limit: int | None = None,
+        tier: str = "free",
     ) -> None:
         circuit = CircuitBreaker(
             provider_name=provider.name,
@@ -189,11 +191,12 @@ class RoutingEngine:
                 provider=provider,
                 api_key=api_key,
                 circuit=circuit,
+                tier=tier,
             )
         )
         if daily_limit is not None:
             self.budget.set_daily_limit(provider.name, daily_limit)
-        logger.info("Registered provider: %s ✓", provider.name)
+        logger.info(f"Registered provider: {provider.name} (tier: {tier}) ✓")
 
     def _prepare_context(self, request: ChatCompletionRequest) -> RequestContext:
         profile = self.profiler.profile(request)
@@ -216,18 +219,49 @@ class RoutingEngine:
         policy_context["budget"] = {"state": "green"}
         return policy_context
 
+    def _get_preferred_tier(self, profile: WorkloadProfile) -> str:
+        """Determine which tier to use based on workload complexity."""
+        # Complex tasks warrant paid providers
+        if profile.required_depth == "deep":
+            return "paid"
+        if profile.estimated_tokens > 8000:
+            return "paid"
+        if profile.task_family in {"coding", "planning", "eval"}:
+            return "paid"
+        if profile.output_contract in {"schema", "code_patch"}:
+            return "paid"
+        # Default to free for simple tasks
+        return "free"
+
     async def _ranked_slots(
         self, context: RequestContext
     ) -> tuple[list[ProviderSlot], RoutingDirective]:
         available: list[ProviderSlot] = []
         candidate_names: list[str] = []
 
+        # Determine which tier to prioritize
+        preferred_tier = self._get_preferred_tier(context.workload_profile)
+        has_paid = any(slot.tier == "paid" for slot in self.slots)
+
         for slot in self.slots:
             if not await slot.circuit.can_execute():
                 continue
             if self.budget.is_budget_exhausted(slot.provider.name):
                 continue
-            available.append(slot)
+
+            # In auto mode, filter by tier preference
+            # If we have paid providers and this is a complex task, prefer paid
+            # Otherwise, prefer free
+            if has_paid:
+                if slot.tier == preferred_tier or (
+                    preferred_tier == "paid" and slot.tier == "paid"
+                ):
+                    available.insert(0, slot)  # Higher priority
+                elif slot.tier == "free":
+                    available.append(slot)  # Fallback
+            else:
+                available.append(slot)
+
             candidate_names.append(slot.provider.name)
 
         policy_order, directive = self.routing_policy.apply(

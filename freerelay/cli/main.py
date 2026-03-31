@@ -30,12 +30,27 @@ def _setup_env_file() -> None:
     if env_path.exists():
         return
 
-    console.print("[yellow]No .env file found. Let's set one up![/yellow]")
+    console.print("[yellow]No .env file found. Let's set one up![/yellow]\n")
+
+    # Ask for mode
+    console.print("[bold cyan]Select Mode:[/bold cyan]")
     console.print(
-        "[dim]Get free API keys from: Groq | Google | OpenRouter | Together | Mistral[/dim]\n"
+        "  [green]free[/green] - Use only free providers (Groq, Google, etc.)"
+    )
+    console.print(
+        "  [yellow]paid[/yellow] - Use only paid providers (OpenAI, Anthropic)"
+    )
+    console.print(
+        "  [blue]auto[/blue]  - Use free by default, paid for complex tasks (recommended)\n"
     )
 
-    keys = {
+    mode = Prompt.ask(
+        "[cyan]Choose mode",
+        choices=["free", "paid", "auto"],
+        default="auto",
+    )
+
+    free_keys = {
         "GROQ_API_KEY": "Groq (https://console.groq.com/keys)",
         "GOOGLE_AI_KEY": "Google AI (https://aistudio.google.com/apikey)",
         "OPENROUTER_API_KEY": "OpenRouter (https://openrouter.ai/keys)",
@@ -43,34 +58,41 @@ def _setup_env_file() -> None:
         "MISTRAL_API_KEY": "Mistral (https://console.mistral.ai/api-keys)",
     }
 
-    content = ["# FreeRelay Configuration\n"]
-    skip_keys = []
+    paid_keys = {
+        "OPENAI_API_KEY": "OpenAI (https://platform.openai.com/api-keys)",
+        "ANTHROPIC_API_KEY": "Anthropic (https://console.anthropic.com/settings/keys)",
+    }
 
-    for key, desc in keys.items():
-        add_key = Prompt.ask(f"[cyan]Add {desc}?[y/N]", default="n")
+    content = [
+        "# FreeRelay Configuration\n",
+        f"\n# Mode: free, paid, or auto\n",
+        f"FREERELAY_MODE={mode}\n",
+    ]
+
+    # Ask about free keys
+    console.print("\n[bold cyan]Free Provider Keys:[/bold cyan]")
+    for key, desc in free_keys.items():
+        add_key = Prompt.ask(f"Add {desc}?", choices=["y", "n"], default="n")
         if add_key.lower() == "y":
             api_key = Prompt.obscurored(f"  Enter {key}:")
             if api_key.strip():
                 content.append(f"{key}={api_key.strip()}\n")
-            else:
-                skip_keys.append(key)
-        else:
-            skip_keys.append(key)
 
-    if len(skip_keys) == len(keys):
-        console.print(
-            "\n[yellow]No API keys provided. Running in DEMO mode (no real LLM calls).[/yellow]"
-        )
-        console.print(
-            "[dim]You can still test the API. To use real LLMs, add keys later.[/dim]\n"
-        )
+    # Ask about paid keys (optional)
+    console.print("\n[bold cyan]Paid Provider Keys (optional):[/bold cyan]")
+    for key, desc in paid_keys.items():
+        add_key = Prompt.ask(f"Add {desc}?", choices=["y", "n"], default="n")
+        if add_key.lower() == "y":
+            api_key = Prompt.obscurored(f"  Enter {key}:")
+            if api_key.strip():
+                content.append(f"{key}={api_key.strip()}\n")
 
     content.append("\n# Server settings\nFREERELAY_PORT=8000\n")
 
     with open(env_path, "w") as f:
         f.writelines(content)
 
-    console.print(f"[green]✓ Created .env file[/green]\n")
+    console.print(f"\n[green]✓ Created .env file with {mode} mode![/green]\n")
 
 
 @app.command()
