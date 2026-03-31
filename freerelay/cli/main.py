@@ -24,15 +24,44 @@ console = Console()
 
 
 def _setup_env_file() -> None:
-    """Create .env file with user input if it doesn't exist."""
+    """Create .env file with defaults if it doesn't exist."""
     env_path = Path(".env")
 
     if env_path.exists():
         return
 
-    console.print("[yellow]No .env file found. Let's set one up![/yellow]\n")
+    console.print(
+        "[yellow]No .env file found. Creating default configuration...[/yellow]\n"
+    )
 
-    # Ask for mode
+    content = """# FreeRelay Configuration
+# Mode: free, paid, or auto (default)
+FREERELAY_MODE=auto
+
+# Free providers (add your API keys here)
+# Get free keys from: Groq | Google | OpenRouter | Together | Mistral
+# GROQ_API_KEY=your_key_here
+# GOOGLE_AI_KEY=your_key_here
+
+# Paid providers (optional)
+# OPENAI_API_KEY=your_key_here
+# ANTHROPIC_API_KEY=your_key_here
+
+# Server settings
+FREERELAY_PORT=8000
+"""
+    with open(env_path, "w") as f:
+        f.write(content)
+
+    console.print("[green]✓ Created .env file with auto mode![/green]")
+    console.print("[dim]Add API keys to .env to use real LLM providers.[/dim]\n")
+    console.print("[dim]Run 'freerelay setup' to add keys interactively.[/dim]\n")
+
+
+def _setup_env_interactive() -> None:
+    """Interactive setup to add API keys."""
+    env_path = Path(".env")
+
     console.print("[bold cyan]Select Mode:[/bold cyan]")
     console.print(
         "  [green]free[/green] - Use only free providers (Groq, Google, etc.)"
@@ -69,7 +98,6 @@ def _setup_env_file() -> None:
         f"FREERELAY_MODE={mode}\n",
     ]
 
-    # Ask about free keys
     console.print("\n[bold cyan]Free Provider Keys:[/bold cyan]")
     for key, desc in free_keys.items():
         add_key = Prompt.ask(f"Add {desc}?", choices=["y", "n"], default="n")
@@ -78,7 +106,6 @@ def _setup_env_file() -> None:
             if api_key.strip():
                 content.append(f"{key}={api_key.strip()}\n")
 
-    # Ask about paid keys (optional)
     console.print("\n[bold cyan]Paid Provider Keys (optional):[/bold cyan]")
     for key, desc in paid_keys.items():
         add_key = Prompt.ask(f"Add {desc}?", choices=["y", "n"], default="n")
@@ -244,8 +271,8 @@ def open_dashboard() -> None:
 
 @app.command()
 def setup() -> None:
-    """Setup .env file with API keys."""
-    _setup_env_file()
+    """Interactive setup to add API keys."""
+    _setup_env_interactive()
     console.print(
         "[green]✓ Setup complete! Run [bold]freerelay[/bold] to start.[/green]"
     )
