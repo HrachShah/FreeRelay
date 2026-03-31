@@ -17,7 +17,7 @@ from rich.prompt import Prompt
 
 app = typer.Typer(
     name="freerelay",
-    help="⚡ FreeRelay — AI gateway for free LLM tiers. Run [bold]freerelay[/bold] to start!",
+    help="FreeRelay - AI gateway. Run freerelay to start!",
     add_completion=False,
 )
 console = Console()
@@ -53,9 +53,9 @@ FREERELAY_PORT=8000
     with open(env_path, "w") as f:
         f.write(content)
 
-    console.print("[green]✓ Created .env file with auto mode![/green]")
-    console.print("[dim]Add API keys to .env to use real LLM providers.[/dim]\n")
-    console.print("[dim]Run 'freerelay setup' to add keys interactively.[/dim]\n")
+    console.print("[green]Created .env file with auto mode![/green]")
+    console.print("[dim]Add API keys to .env to use real LLM providers.[/dim]")
+    console.print("[dim]Run 'freerelay setup' to add keys interactively.[/dim]")
 
 
 def _setup_env_interactive() -> None:
@@ -119,13 +119,13 @@ def _setup_env_interactive() -> None:
     with open(env_path, "w") as f:
         f.writelines(content)
 
-    console.print(f"\n[green]✓ Created .env file with {mode} mode![/green]\n")
+    console.print(f"\n[green]Created .env file with {mode} mode![/green]\n")
 
 
 @app.command()
 def start(
-    port: int = typer.Option(8000, help="Port to run on"),
-    demo: bool = typer.Option(False, help="Force demo mode (no API keys needed)"),
+    port: int = typer.Argument(8000, help="Port to run on"),
+    demo: bool = typer.Option(False, help="Force demo mode"),
 ) -> None:
     """Start the FreeRelay AI gateway."""
     import uvicorn
@@ -142,7 +142,7 @@ def start(
 
     console.print(
         Panel.fit(
-            "[bold cyan]⚡ FreeRelay AI Gateway[/bold cyan]\n"
+            "[bold cyan]FreeRelay AI Gateway[/bold cyan]\n"
             f"Starting on [green]http://localhost:{port}[/green]\n"
             f"[dim]API: http://localhost:{port}/v1/chat/completions[/dim]\n"
             f"[dim]Docs: http://localhost:{port}/docs[/dim]",
@@ -209,8 +209,8 @@ def status() -> None:
 
 @app.command()
 def benchmark(
-    requests: int = typer.Option(10, "-n", help="Number of requests"),
-    concurrent: int = typer.Option(3, "-c", help="Concurrent requests"),
+    requests: int = typer.Option(10, "--requests", help="Number of requests"),
+    concurrent: int = typer.Option(3, "--concurrent", help="Concurrent requests"),
 ) -> None:
     """Run a quick benchmark."""
     import asyncio
@@ -273,9 +273,7 @@ def open_dashboard() -> None:
 def setup() -> None:
     """Interactive setup to add API keys."""
     _setup_env_interactive()
-    console.print(
-        "[green]✓ Setup complete! Run [bold]freerelay[/bold] to start.[/green]"
-    )
+    console.print("[green]Setup complete! Run [bold]freerelay[/bold] to start.[/green]")
 
 
 # Default command - just run "freerelay" without any subcommand
