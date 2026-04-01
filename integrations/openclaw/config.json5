@@ -1,0 +1,35 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "freerelay/groq-llama-3.1-70b"
+      },
+      "models": {
+        "freerelay/groq-llama-3.1-70b": {
+          "params": {
+            "baseUrl": "http://localhost:8000/v1",
+            "apiKey": "not-needed",
+            "api": "openai-chat",
+            "transport": "auto"
+          }
+        },
+        "freerelay/google-gemini": {
+          "params": {
+            "baseUrl": "http://localhost:8000/v1",
+            "apiKey": "not-needed",
+            "api": "openai-chat",
+            "transport": "auto"
+          }
+        },
+        "freerelay/openrouter-llama": {
+          "params": {
+            "baseUrl": "http://localhost:8000/v1",
+            "apiKey": "not-needed",
+            "api": "openai-chat",
+            "transport": "auto"
+          }
+        }
+      }
+    }
+  }
+}

@@ -301,6 +301,67 @@ const client = new OpenAI({
 Set the OpenAI API base to `http://localhost:8000/v1`. No API key needed.
 </details>
 
+<details>
+<summary><strong>OpenClaw</strong></summary>
+
+FreeRelay has built-in OpenClaw integration. Start FreeRelay, then fetch the config:
+
+```bash
+# Start FreeRelay
+python -m freerelay.main
+
+# Get the OpenClaw config snippet
+curl http://localhost:8000/openclaw/config
+```
+
+**Option A — Use the onboard wizard (recommended):**
+```bash
+openclaw onboard --install-daemon
+# When prompted: Manual → Custom → Base URL: http://localhost:8000/v1 → Model: freerelay/auto
+```
+
+**Option B — Non-interactive:**
+```bash
+openclaw onboard --non-interactive --accept-risk \
+  --auth-choice apiKey --token-provider custom \
+  --custom-base-url "http://localhost:8000/v1" \
+  --install-daemon --skip-channels --skip-skills
+```
+
+**Option C — Manual config (`~/.openclaw/openclaw.json`):**
+```json
+{
+  "models": {
+    "providers": {
+      "freerelay": {
+        "baseUrl": "http://localhost:8000/v1",
+        "apiKey": "not-needed",
+        "api": "openai-completions",
+        "models": [
+          { "id": "auto", "name": "FreeRelay Auto" },
+          { "id": "freerelay-groq", "name": "FreeRelay → Groq" },
+          { "id": "freerelay-google", "name": "FreeRelay → Google" }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": { "primary": "freerelay/auto" }
+    }
+  }
+}
+```
+
+Then run:
+```bash
+openclaw gateway run
+```
+
+Use `freerelay/auto` as the model for workload-aware routing across all free providers.
+For more details, see [docs/openclaw-integration.md](docs/openclaw-integration.md).
+</details>
+
 ## Docker
 
 ```bash
@@ -360,6 +421,7 @@ freerelay/
 │   ├── providers/                 # Groq, Google, OpenRouter, Together, Mistral
 │   ├── middleware/                # Auth, audit
 │   ├── observability/             # Prometheus, structlog, health probes
+│   ├── openclaw/                  # OpenClaw integration adapter
 │   └── cli/                       # Typer CLI
 ├── tests/                         # Unit + integration tests
 ├── docker/                        # Dockerfile + compose stack

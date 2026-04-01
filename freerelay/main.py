@@ -376,6 +376,75 @@ def create_app() -> FastAPI:
             media_type=CONTENT_TYPE_LATEST,
         )
 
+    # ── OpenClaw Integration ──────────────────────────────────────
+    @app.get("/openclaw/config")
+    async def openclaw_config(
+        request: Request,
+        base_url: str | None = None,
+        api_key: str | None = None,
+    ) -> dict[str, object]:
+        """
+        Generate an OpenClaw provider config snippet.
+
+        Query params:
+          - base_url: Override the FreeRelay base URL (default: auto-detected)
+          - api_key: Override the API key (default: gateway key or 'not-needed')
+
+        Returns a JSON fragment ready to merge into ~/.openclaw/openclaw.json.
+        """
+        from freerelay.openclaw.adapter import OpenClawAdapter
+
+        engine = _engine
+
+        # Auto-detect base URL from request if not provided
+        if base_url is None:
+            scheme = request.url.scheme
+            host = request.url.hostname or "localhost"
+            port = request.url.port or settings.port
+            base_url = f"{scheme}://{host}:{port}/v1"
+
+        provider_models = engine.get_stats() if engine else []
+        adapter = OpenClawAdapter(settings, provider_models)
+        config = adapter.generate_config(base_url=base_url, api_key=api_key)
+        setup_commands = adapter.generate_setup_commands(base_url=base_url)
+
+        return {
+            "openclaw_config": config,
+            "setup_commands": setup_commands,
+            "instructions": (
+                "Merge 'openclaw_config' into ~/.openclaw/openclaw.json, "
+                "or run one of the 'setup_commands' to configure automatically."
+            ),
+        }
+
+    @app.get("/openclaw/models")
+    async def openclaw_models() -> dict[str, object]:
+        """
+        List available models in OpenClaw-compatible format.
+
+        This endpoint returns models in the format OpenClaw expects,
+        with provider-prefixed model IDs (e.g., 'freerelay/auto').
+        """
+        from freerelay.openclaw.adapter import OpenClawAdapter
+
+        engine = _engine
+        provider_models = engine.get_stats() if engine else []
+        adapter = OpenClawAdapter(settings, provider_models)
+        models = adapter.build_models()
+
+        return {
+            "object": "list",
+            "data": [
+                {
+                    "id": f"freerelay/{m.id}",
+                    "object": "model",
+                    "owned_by": "freerelay",
+                    "name": m.name,
+                }
+                for m in models
+            ],
+        }
+
     return app
 
 
