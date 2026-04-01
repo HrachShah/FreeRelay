@@ -71,7 +71,7 @@ class ProviderSlot:
         import heapq
 
         n = len(self._latency_samples)
-        k = max(1, int(n * 0.95))
+        k = max(1, int(round(n * 0.95)))
         # Get the k-th smallest element (which is p95)
         self._sorted_cache = heapq.nsmallest(k, self._latency_samples)
         self.latency_p95_ms = self._sorted_cache[-1] if self._sorted_cache else 1000.0
@@ -155,7 +155,7 @@ class RoutingEngine:
             return None
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
             matrix = CapabilityMatrix.model_validate(data)
             logger.info("Loaded capability matrix: %d models", len(matrix.models))

@@ -12,12 +12,11 @@ import logging
 import time
 from collections.abc import AsyncIterator
 
+from freerelay.core.execution.hedging import hedged_execute
 from freerelay.core.models.openai import (
     ChatCompletionRequest,
     ChatCompletionResponse,
 )
-from freerelay.core.execution.hedging import hedged_execute
-from freerelay.core.execution.retry import retry_with_backoff
 from freerelay.core.resilience.circuit_breaker import CircuitBreaker
 from freerelay.providers.base import BaseProvider, ProviderError, RateLimitError
 
@@ -150,7 +149,19 @@ class Executor:
             Response from the fastest provider.
         """
         provider_keys = [(p, k) for p, k, _ in providers]
-        return await hedged_execute(provider_keys, request)
+        circuits = {p.name: c for p, _, c in providers}
+        try:
+            response = await hedged_execute(provider_keys, request)
+            # Record success on the circuit breaker of whichever provider won
+            for _name, circuit in circuits.items():
+                await circuit.record_success()
+            return response
+        except Exception as e:
+            # Record failure on all involved circuit breakers
+            for _name, circuit in circuits.items():
+                status = e.status_code if isinstance(e, ProviderError) else None
+                await circuit.record_failure(status)
+            raise
 
     async def execute_stream(
         self,

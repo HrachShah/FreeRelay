@@ -13,7 +13,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import redis.asyncio as aioredis
@@ -28,7 +28,7 @@ CANARY_QUALITY_THRESHOLD = 0.4  # rollback if mean quality drops below
 CANARY_MIN_SAMPLES = 20  # minimum samples before rollback check
 
 
-class ExperimentType(str, Enum):
+class ExperimentType(StrEnum):
     """Types of experiments supported."""
 
     AB_ROUTING = "ab_routing"

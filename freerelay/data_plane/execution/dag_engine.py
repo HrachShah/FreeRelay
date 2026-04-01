@@ -11,9 +11,10 @@ import asyncio
 import logging
 import time
 import uuid
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Callable, Coroutine
+from enum import StrEnum
+from typing import Any
 
 import yaml
 
@@ -22,7 +23,7 @@ from freerelay.data_plane.profiler.workload import WorkloadProfile
 logger = logging.getLogger("freerelay.data_plane.dag")
 
 
-class StepStatus(str, Enum):
+class StepStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -30,7 +31,7 @@ class StepStatus(str, Enum):
     SKIPPED = "skipped"
 
 
-class StepKind(str, Enum):
+class StepKind(StrEnum):
     INFERENCE = "inference"
     JUDGE = "judge"
     REPAIR = "repair"

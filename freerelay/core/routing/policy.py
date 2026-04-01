@@ -102,7 +102,7 @@ class RoutingPolicy:
             logger.warning("Routing rules file not found: %s", path)
             return cls()
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
         rules: list[RoutingRule] = []

@@ -7,8 +7,8 @@ Finds near-duplicate prompts above a configurable similarity threshold.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
-import json
 import logging
 import time
 from dataclasses import dataclass, field
@@ -99,7 +99,17 @@ class SemanticCache:
         parts: list[str] = []
         for msg in request.messages:
             content = msg.content if isinstance(msg.content, str) else ""
-            parts.append(f"{msg.role}:{content.strip()}")
+            entry = f"{msg.role}:{content.strip()}"
+            if msg.tool_calls:
+                import json
+
+                tc_parts = []
+                for tc in msg.tool_calls:
+                    tc_parts.append(f"{tc.function.name}:{tc.function.arguments}")
+                entry += f"|tools:{json.dumps(tc_parts)}"
+            if msg.tool_call_id:
+                entry += f"|tool_id:{msg.tool_call_id}"
+            parts.append(entry)
         return "\n".join(parts)
 
     def _compute_key(self, text: str) -> str:
@@ -132,8 +142,6 @@ class SemanticCache:
             minhash = self._text_to_minhash(canonical)
             if minhash is not None:
                 try:
-                    from datasketch import MinHashLSH
-
                     results = self._lsh.query(minhash)
                     for result_key in results:
                         candidate = self._entries.get(result_key)
@@ -191,19 +199,15 @@ class SemanticCache:
         for k in expired:
             del self._entries[k]
             if self._lsh is not None:
-                try:
+                with contextlib.suppress(KeyError):
                     self._lsh.remove(k)
-                except KeyError:
-                    pass
 
     def flush(self) -> None:
         """Clear the entire cache."""
         self._entries.clear()
         if self._lsh is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._init_lsh()
-            except Exception:
-                pass
 
     def stats(self) -> dict[str, object]:
         """Cache statistics."""

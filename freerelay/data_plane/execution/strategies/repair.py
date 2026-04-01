@@ -7,7 +7,6 @@ Repair model receives original request + failed response + failure reason.
 from __future__ import annotations
 
 import time
-from typing import Any
 
 from freerelay.data_plane.execution.dag_engine import (
     ExecutionContext,
@@ -72,8 +71,8 @@ async def execute(
             repair_prompt += f"\nRepair instructions: {repair_instructions}\n"
 
         repair_prompt += (
-            f"\nProvide the corrected response. Output ONLY the corrected content, "
-            f"no explanations or commentary."
+            "\nProvide the corrected response. Output ONLY the corrected content, "
+            "no explanations or commentary."
         )
 
         router = ctx.globals.get("router")

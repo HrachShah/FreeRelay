@@ -10,15 +10,13 @@ from __future__ import annotations
 import enum
 import time
 import uuid
-from dataclasses import dataclass, field
 
 from pydantic import BaseModel, Field
-
 
 # ─── Enums (§3.1 — Workload Axes) ────────────────────────────────────────────
 
 
-class TaskFamily(str, enum.Enum):
+class TaskFamily(enum.StrEnum):
     """Top-level task classification."""
 
     CHAT = "chat"
@@ -31,7 +29,7 @@ class TaskFamily(str, enum.Enum):
     AGENT_LOOP = "agent_loop"
 
 
-class Depth(str, enum.Enum):
+class Depth(enum.StrEnum):
     """Required reasoning depth."""
 
     SHALLOW = "shallow"
@@ -39,7 +37,7 @@ class Depth(str, enum.Enum):
     DEEP = "deep"
 
 
-class Sensitivity(str, enum.Enum):
+class Sensitivity(enum.StrEnum):
     """Precision / factual sensitivity."""
 
     LOW = "low"
@@ -47,7 +45,7 @@ class Sensitivity(str, enum.Enum):
     HIGH = "high"
 
 
-class LatencyClass(str, enum.Enum):
+class LatencyClass(enum.StrEnum):
     """Latency requirement class."""
 
     INTERACTIVE = "interactive"
@@ -55,7 +53,7 @@ class LatencyClass(str, enum.Enum):
     BATCH = "batch"
 
 
-class ContextTopology(str, enum.Enum):
+class ContextTopology(enum.StrEnum):
     """Shape of the input context."""
 
     SHORT = "short"
@@ -65,7 +63,7 @@ class ContextTopology(str, enum.Enum):
     MULTIMODAL = "multimodal"
 
 
-class ToolDependence(str, enum.Enum):
+class ToolDependence(enum.StrEnum):
     """How much the task depends on tool calls."""
 
     NONE = "none"
@@ -73,7 +71,7 @@ class ToolDependence(str, enum.Enum):
     MANDATORY = "mandatory"
 
 
-class Determinism(str, enum.Enum):
+class Determinism(enum.StrEnum):
     """Required determinism of output."""
 
     LOW = "low"
@@ -81,7 +79,7 @@ class Determinism(str, enum.Enum):
     STRICT = "strict"
 
 
-class SafetyPosture(str, enum.Enum):
+class SafetyPosture(enum.StrEnum):
     """Safety constraints for the request."""
 
     PERMISSIVE = "permissive"
@@ -89,7 +87,7 @@ class SafetyPosture(str, enum.Enum):
     LOCKED_DOWN = "locked_down"
 
 
-class OutputContract(str, enum.Enum):
+class OutputContract(enum.StrEnum):
     """Expected output format."""
 
     PROSE = "prose"
@@ -99,7 +97,7 @@ class OutputContract(str, enum.Enum):
     TOOL_CALLS = "tool_calls"
 
 
-class EconomicPolicy(str, enum.Enum):
+class EconomicPolicy(enum.StrEnum):
     """Cost optimization policy."""
 
     CHEAPEST = "cheapest"

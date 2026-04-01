@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 BENCHMARK_SUITE_DIR = Path("tests/benchmark_suite/prompts")
 
 
-class BenchmarkType(str, enum.Enum):
+class BenchmarkType(enum.StrEnum):
     """Benchmark categories for provider evaluation."""
 
     JSON_SCHEMA = "json_schema"
@@ -349,7 +349,7 @@ def load_suite(suite_dir: Path | str | None = None) -> list[BenchmarkPrompt]:
     if base_dir.exists() and base_dir.is_dir():
         for json_file in sorted(base_dir.glob("*.json")):
             try:
-                with open(json_file, "r", encoding="utf-8") as f:
+                with open(json_file, encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, list):
                     for entry in data:
@@ -398,7 +398,7 @@ def get_spot_sample(
 
     # Distribute proportionally, at least 1 per type
     sample: list[BenchmarkPrompt] = []
-    for btype, type_prompts in by_type.items():
+    for _btype, type_prompts in by_type.items():
         type_count = max(1, int(len(type_prompts) * fraction))
         sampled = rng.sample(type_prompts, min(type_count, len(type_prompts)))
         sample.extend(sampled)

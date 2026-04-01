@@ -31,19 +31,64 @@ def _openai_to_gemini(request: ChatCompletionRequest) -> dict[str, object]:
 
     for msg in request.messages:
         role = msg.role
-        text = msg.content if isinstance(msg.content, str) else ""
+        if isinstance(msg.content, str):
+            text = msg.content
+            parts = [{"text": text}]
+        elif isinstance(msg.content, list):
+            parts = []
+            for part in msg.content:
+                if isinstance(part, dict):
+                    if part.get("type") == "image_url":
+                        image_url = part.get("image_url", {}).get("url", "")
+                        if image_url.startswith("data:"):
+                            header, b64data = image_url.split(",", 1)
+                            mime = header.split(":")[1].split(";")[0]
+                            parts.append(
+                                {
+                                    "inlineData": {
+                                        "mimeType": mime,
+                                        "data": b64data,
+                                    }
+                                }
+                            )
+                        else:
+                            parts.append(
+                                {
+                                    "fileData": {
+                                        "mimeType": "image/*",
+                                        "fileUri": image_url,
+                                    }
+                                }
+                            )
+                    elif part.get("type") == "text" and part.get("text"):
+                        parts.append({"text": part["text"]})
+                elif hasattr(part, "type"):
+                    if part.type == "text" and part.text:
+                        parts.append({"text": part.text})
+                    elif part.type == "image_url" and part.image_url:
+                        url = (
+                            part.image_url.get("url", "")
+                            if isinstance(part.image_url, dict)
+                            else ""
+                        )
+                        if url.startswith("data:"):
+                            header, b64data = url.split(",", 1)
+                            mime = header.split(":")[1].split(";")[0]
+                            parts.append(
+                                {"inlineData": {"mimeType": mime, "data": b64data}}
+                            )
+            if not parts:
+                parts = [{"text": ""}]
+        else:
+            parts = [{"text": ""}]
 
         if role == "system":
-            system_text = (system_text or "") + text + "\n"
+            text_content = " ".join(p.get("text", "") for p in parts if "text" in p)
+            system_text = (system_text or "") + text_content + "\n"
             continue
 
         gemini_role = "model" if role == "assistant" else "user"
-        contents.append(
-            {
-                "role": gemini_role,
-                "parts": [{"text": text}],
-            }
-        )
+        contents.append({"role": gemini_role, "parts": parts})
 
     payload: dict[str, object] = {"contents": contents}
 
@@ -195,6 +240,17 @@ def _gemini_chunk_to_sse(chunk: dict[str, object], model: str, chunk_id: str) ->
     parts = first.get("content", {}).get("parts", [])  # type: ignore[union-attr]
     text = parts[0].get("text", "") if parts else ""  # type: ignore[index]
 
+    gemini_finish = first.get("finishReason")  # type: ignore[union-attr]
+    finish_reason = None
+    if gemini_finish:
+        finish_map = {
+            "STOP": "stop",
+            "MAX_TOKENS": "length",
+            "SAFETY": "content_filter",
+            "RECITATION": "content_filter",
+        }
+        finish_reason = finish_map.get(gemini_finish, "stop")  # type: ignore[arg-type]
+
     openai_chunk = {
         "id": chunk_id,
         "object": "chat.completion.chunk",
@@ -204,7 +260,7 @@ def _gemini_chunk_to_sse(chunk: dict[str, object], model: str, chunk_id: str) ->
             {
                 "index": 0,
                 "delta": {"content": text} if text else {},
-                "finish_reason": None,
+                "finish_reason": finish_reason,
             }
         ],
     }

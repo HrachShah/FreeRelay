@@ -16,7 +16,6 @@ from typing import Any
 import redis.asyncio as aioredis
 
 from freerelay.control_plane.experiments.replay import (
-    CounterfactualOutcome,
     ReplayEngine,
     ReplayReport,
 )
@@ -222,10 +221,7 @@ class WhatIfSimulator:
         # Need sufficient samples for confidence
         if sample_count < 20:
             return "inconclusive", "low"
-        if sample_count < 100:
-            confidence = "medium"
-        else:
-            confidence = "high"
+        confidence = "medium" if sample_count < 100 else "high"
 
         # Quality improvement is the primary signal
         if quality_delta > 0.05 and latency_delta_ms < 500 and cost_delta < 0.01:

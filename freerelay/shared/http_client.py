@@ -7,8 +7,9 @@ All providers share this client to avoid creating new connections per request.
 
 from __future__ import annotations
 
-import httpx
 import logging
+
+import httpx
 
 logger = logging.getLogger("freerelay.http_client")
 
@@ -16,7 +17,14 @@ logger = logging.getLogger("freerelay.http_client")
 _MAX_CONNECTIONS = 100
 _MAX_KEEPALIVE_CONNECTIONS = 20
 _KEEPALIVE_EXPIRY = 30.0  # seconds
-_HTTP2 = True  # Enable HTTP/2 for multiplexing
+
+# Check if h2 is available before enabling HTTP/2
+try:
+    import h2  # noqa: F401
+
+    _HTTP2 = True
+except ImportError:
+    _HTTP2 = False
 
 _client: httpx.AsyncClient | None = None
 

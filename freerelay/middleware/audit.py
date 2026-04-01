@@ -6,8 +6,8 @@ Logs every request/response pair for debugging and compliance.
 
 from __future__ import annotations
 
-import time
 import logging
+import time
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint

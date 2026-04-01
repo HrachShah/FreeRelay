@@ -12,6 +12,7 @@ import uuid
 from typing import Any
 
 import redis.asyncio as aioredis
+
 from freerelay.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -134,7 +135,7 @@ class ControlPlane:
                 count=100,
                 block=1000,
             )
-            for stream_name, messages in results:
+            for _stream_name, messages in results:
                 for msg_id, fields in messages:
                     outcomes.append({"id": msg_id, **fields})
                     # Acknowledge

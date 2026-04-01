@@ -7,7 +7,13 @@ Metrics registry with all counters, histograms, and gauges from the spec.
 from __future__ import annotations
 
 try:
-    from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
+    from prometheus_client import (
+        CONTENT_TYPE_LATEST,
+        Counter,
+        Gauge,
+        Histogram,
+        generate_latest,
+    )
 
     requests_total = Counter(
         "freerelay_requests_total",
@@ -58,7 +64,7 @@ except ImportError:
 
     # Stubs so code doesn't break without prometheus-client
     class _StubMetric:
-        def labels(self, *args: object, **kwargs: object) -> "_StubMetric":
+        def labels(self, *args: object, **kwargs: object) -> _StubMetric:
             return self
         def inc(self, *args: object) -> None: pass
         def set(self, *args: object) -> None: pass

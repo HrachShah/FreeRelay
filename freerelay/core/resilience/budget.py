@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 @dataclass
 class BudgetState:
     """Token budget state for a single provider/key."""
+
     tokens_used_today: int = 0
     tokens_used_this_minute: int = 0
     ewma_rate: float = 0.0  # tokens per minute
@@ -59,14 +60,17 @@ class BudgetForecaster:
         state = self._get_state(provider)
         now = time.time()
 
-        # Check if we've crossed a minute boundary
+        # Check if we've crossed one or more minute boundaries
         elapsed = now - state.last_updated_ts
         if elapsed >= 60:
-            # Update EWMA with the minute's consumption
+            full_minutes = int(elapsed / 60)
+            # Apply zero-rate EWMA updates for idle minutes
+            for _ in range(min(full_minutes, 10)):
+                state.ewma_rate = self.alpha * 0.0 + (1 - self.alpha) * state.ewma_rate
+            # Update EWMA with the current minute's consumption
             current_rate = state.tokens_used_this_minute
             state.ewma_rate = (
-                self.alpha * current_rate
-                + (1 - self.alpha) * state.ewma_rate
+                self.alpha * current_rate + (1 - self.alpha) * state.ewma_rate
             )
             state.tokens_used_this_minute = 0
             state.last_updated_ts = now

@@ -8,9 +8,9 @@ Adds WorkloadProfile as span attributes for routing analysis.
 from __future__ import annotations
 
 import logging
-import time
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from freerelay.data_plane.profiler.workload import WorkloadProfile

@@ -24,10 +24,10 @@ from __future__ import annotations
 
 import asyncio
 import time
-from enum import Enum
+from enum import StrEnum
 
 
-class CircuitState(str, Enum):
+class CircuitState(StrEnum):
     CLOSED = "CLOSED"
     OPEN = "OPEN"
     HALF_OPEN = "HALF_OPEN"
@@ -73,12 +73,19 @@ class CircuitBreaker:
         self._open_since: float = 0.0
         self._lock = asyncio.Lock()
 
-    @property
-    def state(self) -> CircuitState:
-        """Current circuit state, checking for auto-transition OPEN → HALF_OPEN."""
+    def _check_auto_transition(self) -> CircuitState:
+        """Check for OPEN → HALF_OPEN auto-transition (must hold _lock)."""
         if self._state == CircuitState.OPEN:
             if time.time() - self._open_since >= self.recovery_timeout:
                 self._state = CircuitState.HALF_OPEN
+        return self._state
+
+    @property
+    def state(self) -> CircuitState:
+        """Current circuit state (read-only, no lock — use for display only)."""
+        if self._state == CircuitState.OPEN:
+            if time.time() - self._open_since >= self.recovery_timeout:
+                return CircuitState.HALF_OPEN
         return self._state
 
     async def can_execute(self) -> bool:
@@ -89,21 +96,18 @@ class CircuitBreaker:
             True if the circuit allows the request.
         """
         async with self._lock:
-            current = self.state
+            current = self._check_auto_transition()
 
             if current == CircuitState.CLOSED:
                 return True
 
-            if current == CircuitState.HALF_OPEN:
-                return True  # Allow one probe request
-
-            # OPEN
-            return False
+            return current == CircuitState.HALF_OPEN
 
     async def record_success(self) -> None:
         """Record a successful request."""
         async with self._lock:
-            if self._state == CircuitState.HALF_OPEN:
+            current = self._check_auto_transition()
+            if current == CircuitState.HALF_OPEN:
                 self._state = CircuitState.CLOSED
                 self._failure_timestamps.clear()
 
@@ -121,7 +125,8 @@ class CircuitBreaker:
         async with self._lock:
             now = time.time()
 
-            if self._state == CircuitState.HALF_OPEN:
+            current = self._check_auto_transition()
+            if current == CircuitState.HALF_OPEN:
                 # Probe failed → back to OPEN
                 self._state = CircuitState.OPEN
                 self._open_since = now
@@ -130,15 +135,11 @@ class CircuitBreaker:
             # CLOSED state — track failures
             self._failure_timestamps.append(now)
 
-            # Prune old failures outside the window - use in-place filter
+            # Prune old failures outside the window
             cutoff = now - self.failure_window
-            # Efficiently remove old entries without creating a new list
-            write_idx = 0
-            for read_idx, ts in enumerate(self._failure_timestamps):
-                if ts > cutoff:
-                    self._failure_timestamps[write_idx] = ts
-                    write_idx += 1
-            del self._failure_timestamps[write_idx:]
+            self._failure_timestamps = [
+                ts for ts in self._failure_timestamps if ts > cutoff
+            ]
 
             if len(self._failure_timestamps) >= self.failure_threshold:
                 self._state = CircuitState.OPEN
@@ -149,7 +150,7 @@ class CircuitBreaker:
         Score for routing engine (§14.1).
         CLOSED = 1.0, HALF_OPEN = 0.5, OPEN = 0.0
         """
-        current = self.state
+        current = self.state  # read-only property, no mutation
         if current == CircuitState.CLOSED:
             return 1.0
         if current == CircuitState.HALF_OPEN:
@@ -160,7 +161,7 @@ class CircuitBreaker:
         """State for dashboard/API."""
         return {
             "provider": self.provider_name,
-            "state": self.state.value,
+            "state": self.state.value,  # read-only property
             "failure_count": len(self._failure_timestamps),
             "score": self.get_score(),
         }

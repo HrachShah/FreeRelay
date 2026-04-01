@@ -13,7 +13,6 @@ from typing import Any
 
 import structlog
 
-
 # ─── Processors ──────────────────────────────────────────────────────────────
 
 

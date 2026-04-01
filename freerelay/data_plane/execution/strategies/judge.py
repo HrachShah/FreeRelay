@@ -7,7 +7,6 @@ Judge model receives N candidates, selects best based on rubric.
 from __future__ import annotations
 
 import time
-from typing import Any
 
 from freerelay.data_plane.execution.dag_engine import (
     ExecutionContext,
@@ -102,7 +101,7 @@ async def execute(
 
     try:
         router = ctx.globals.get("router")
-        request = ctx.globals.get("request")
+        ctx.globals.get("request")
 
         # Use the router to get a judge response
         if router and hasattr(router, "route"):

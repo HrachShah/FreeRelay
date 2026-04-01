@@ -1,18 +1,22 @@
 """
 FreeRelay — Expected Utility Scorer (§14.1)
-====================================================
-Routes based on utility = P(success) × quality × schema × latency × cost × safety × policy weight.
+============================================
+Routes on utility = P(success) × quality × schema × latency × cost × safety.
 """
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from freerelay.core.intelligence.profiler import WorkloadProfile
 from freerelay.core.models.capability import CapabilityMatrix, ModelCapability
 from freerelay.core.resilience.budget import BudgetForecaster
 from freerelay.core.resilience.circuit_breaker import CircuitBreaker
 from freerelay.core.routing.policy import RoutingDirective
+
+if TYPE_CHECKING:
+    from freerelay.core.routing.engine import ProviderSlot
 
 
 def _capability_score(
@@ -87,15 +91,21 @@ def _safety_multiplier(
 
 
 def compute_expected_utility(
-    slot: "ProviderSlot",
+    slot: ProviderSlot,
     profile: WorkloadProfile,
     capability_matrix: CapabilityMatrix | None,
     budget: BudgetForecaster,
     directive: RoutingDirective | None,
 ) -> float:
-    capability = _capability_score(slot.provider.name, profile.task_family, capability_matrix)
+    capability = _capability_score(
+        slot.provider.name, profile.task_family, capability_matrix
+    )
     success_prob = max(0.1, (capability + slot.circuit.get_score()) / 2.0)
-    provider_models = capability_matrix.get_provider_models(slot.provider.name) if capability_matrix else []
+    provider_models = (
+        list(capability_matrix.get_provider_models(slot.provider.name).values())
+        if capability_matrix
+        else []
+    )
     quality = _quality_score(provider_models)
     schema = _schema_success_prob(provider_models, directive)
     latency = _latency_score(slot.latency_p95_ms)

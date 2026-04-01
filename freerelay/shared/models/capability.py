@@ -12,11 +12,10 @@ import time
 
 from pydantic import BaseModel, Field
 
-
 # ─── CircuitState (§10.2) ────────────────────────────────────────────────────
 
 
-class CircuitState(str, enum.Enum):
+class CircuitState(enum.StrEnum):
     """Circuit breaker states."""
 
     CLOSED = "CLOSED"

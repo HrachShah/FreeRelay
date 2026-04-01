@@ -244,7 +244,7 @@ class BenchmarkEngine:
                 ttft_ms = 50.0
                 tokens_out = len(output.split())
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             error = f"Timeout after {prompt.timeout_s}s"
         except Exception as exc:
             error = str(exc)

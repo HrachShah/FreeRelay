@@ -101,13 +101,13 @@ class ProviderRegistry:
         Returns:
             Number of providers after reload.
         """
-        # Remove previously loaded modules
+        # Remove previously loaded plugin modules
         for module_name in list(self._loaded_modules.keys()):
             sys.modules.pop(module_name, None)
+            # Also remove plugin-registered providers
+            provider_name = self._loaded_modules[module_name]
+            self._providers.pop(provider_name, None)
         self._loaded_modules.clear()
-
-        # Remove plugin-registered providers
-        self._providers.clear()
 
         # Re-discover
         self.discover_plugins()

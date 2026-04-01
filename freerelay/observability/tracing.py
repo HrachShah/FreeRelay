@@ -14,9 +14,9 @@ logger = logging.getLogger("freerelay.tracing")
 _OTEL_AVAILABLE = False
 try:
     from opentelemetry import trace
+    from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.sdk.resources import Resource
 
     _SDK_AVAILABLE = True
 except ImportError:

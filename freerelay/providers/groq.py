@@ -23,7 +23,7 @@ class GroqProvider(BaseProvider):
     supported_features = {"streaming"}
 
     # Groq does NOT support logprobs or logit_bias — strip them
-    _default_model = "llama-3.1-70b-versatile"
+    _default_model = "llama-3.1-8b-instant"
 
     async def complete(
         self,

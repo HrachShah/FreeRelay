@@ -6,8 +6,8 @@ Combines prompt compression with structured lanes, salience, and packing heurist
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Sequence
 
 from freerelay.core.intelligence.compressor import CompressionResult, PromptCompressor
 from freerelay.core.models.openai import ChatCompletionRequest, Message

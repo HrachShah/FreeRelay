@@ -8,6 +8,7 @@ Maintains warm cache with 60s refresh for fast lookups.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -93,10 +94,8 @@ class CapabilityRecord:
         """Hydrate from Redis hash data."""
         quality_by_task = {}
         raw_quality = data.get("quality_by_task_family", "{}")
-        try:
+        with contextlib.suppress(json.JSONDecodeError, TypeError):
             quality_by_task = json.loads(raw_quality)
-        except (json.JSONDecodeError, TypeError):
-            pass
 
         return cls(
             provider=data.get("provider", ""),

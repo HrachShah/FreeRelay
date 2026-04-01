@@ -6,7 +6,6 @@ FreeRelay CLI — Simplified one-command experience
 from __future__ import annotations
 
 import os
-import sys
 import webbrowser
 from pathlib import Path
 
@@ -94,7 +93,7 @@ def _setup_env_interactive() -> None:
 
     content = [
         "# FreeRelay Configuration\n",
-        f"\n# Mode: free, paid, or auto\n",
+        "\n# Mode: free, paid, or auto\n",
         f"FREERELAY_MODE={mode}\n",
     ]
 
@@ -215,6 +214,7 @@ def benchmark(
     """Run a quick benchmark."""
     import asyncio
     import time
+
     import httpx
 
     payload = {

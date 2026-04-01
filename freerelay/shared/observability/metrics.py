@@ -14,9 +14,7 @@ try:
         Counter,
         Gauge,
         Histogram,
-        CollectorRegistry,
         generate_latest,
-        CONTENT_TYPE_LATEST,
     )
 
     _PROMETHEUS_AVAILABLE = True

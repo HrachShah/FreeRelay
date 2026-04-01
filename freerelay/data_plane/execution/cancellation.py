@@ -7,16 +7,17 @@ Cancellable request wrapper for httpx with async-safe lifecycle.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger("freerelay.data_plane.cancellation")
 
 
-class CancellationReason(str, Enum):
+class CancellationReason(StrEnum):
     """Reasons for request cancellation."""
 
     TIMEOUT = "timeout"
@@ -144,10 +145,8 @@ class CancellableRequest:
     async def __aexit__(self, *args: Any) -> None:
         if self._timeout_task is not None and not self._timeout_task.done():
             self._timeout_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._timeout_task
-            except asyncio.CancelledError:
-                pass
 
     async def _timeout_monitor(self) -> None:
         """Background task to enforce timeout."""

@@ -7,7 +7,6 @@ Consumes from the freerelay:outcomes stream with consumer group management.
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 from dataclasses import dataclass, field
@@ -173,7 +172,7 @@ class OutcomeConsumer:
             return []
 
         records: list[OutcomeRecord] = []
-        for stream_name, messages in results:
+        for _stream_name, messages in results:
             for msg_id, fields in messages:
                 try:
                     record = OutcomeRecord.from_stream(msg_id, fields)

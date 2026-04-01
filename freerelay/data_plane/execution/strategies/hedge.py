@@ -7,8 +7,8 @@ Top 2 providers, first-completed wins, cancel other.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
-from typing import Any
 
 from freerelay.data_plane.execution.dag_engine import (
     ExecutionContext,
@@ -137,10 +137,8 @@ async def execute(
         # Cancel pending tasks
         for task in pending:
             task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
                 await task
-            except (asyncio.CancelledError, Exception):
-                pass
 
         if winner is None:
             # Both failed, try to get errors

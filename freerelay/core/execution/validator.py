@@ -7,8 +7,7 @@ Runs schema/JSON checks and exposes repair hints.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
-from typing import Sequence
+from dataclasses import dataclass
 
 from freerelay.core.models.openai import ChatCompletionResponse
 from freerelay.core.routing.policy import RoutingDirective

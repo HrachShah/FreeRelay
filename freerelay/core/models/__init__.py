@@ -1,9 +1,9 @@
 """FreeRelay core models."""
 
 from .openai import (
+    ChatCompletionChunk,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionChunk,
 )
 
 __all__ = [

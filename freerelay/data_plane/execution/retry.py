@@ -8,11 +8,12 @@ RetryableError classification for HTTP status codes.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import random
-import time
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
-from typing import Any, Callable, Coroutine, TypeVar
+from typing import Any, TypeVar
 
 logger = logging.getLogger("freerelay.data_plane.retry")
 
@@ -70,10 +71,7 @@ def classify_error(exc: Exception) -> bool:
 
     # Check exception message for common patterns
     msg = str(exc).lower()
-    if any(pattern in msg for pattern in ("timeout", "connection", "timed out")):
-        return True
-
-    return False
+    return bool(any(pattern in msg for pattern in ("timeout", "connection", "timed out")))
 
 
 @dataclass
@@ -91,7 +89,7 @@ class RetryConfig:
             self.retryable_status_codes = RETRYABLE_STATUS_CODES
 
 
-async def retry_with_backoff(
+async def retry_with_backoff[T](
     coro_factory: Callable[[], Coroutine[Any, Any, T]],
     max_retries: int = 3,
     base_delay: float = 1.0,
@@ -162,10 +160,8 @@ async def retry_with_backoff(
             )
 
             if on_retry:
-                try:
+                with contextlib.suppress(Exception):
                     on_retry(attempt, exc)
-                except Exception:
-                    pass
 
             await asyncio.sleep(delay)
 
@@ -175,7 +171,7 @@ async def retry_with_backoff(
     raise RuntimeError("Retry loop exited without result or exception")
 
 
-async def retry_with_config(
+async def retry_with_config[T](
     coro_factory: Callable[[], Coroutine[Any, Any, T]],
     config: RetryConfig,
     on_retry: Callable[[int, Exception], None] | None = None,

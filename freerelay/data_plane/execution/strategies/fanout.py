@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any
 
 from freerelay.data_plane.execution.dag_engine import (
     ExecutionContext,

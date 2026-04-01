@@ -12,7 +12,6 @@ from collections.abc import AsyncIterator
 
 from freerelay.core.models.openai import (
     ChatCompletionChunk,
-    ChatCompletionRequest,
     DeltaMessage,
     StreamChoice,
 )

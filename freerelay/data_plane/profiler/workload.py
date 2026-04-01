@@ -67,33 +67,33 @@ class WorkloadProfiler:
     """
 
     def __init__(self) -> None:
-        from freerelay.data_plane.profiler.axes.task_family import classify_task_family
-        from freerelay.data_plane.profiler.axes.required_depth import (
-            classify_required_depth,
-        )
-        from freerelay.data_plane.profiler.axes.precision_sensitivity import (
-            classify_precision_sensitivity,
-        )
-        from freerelay.data_plane.profiler.axes.latency_class import (
-            classify_latency_class,
-        )
         from freerelay.data_plane.profiler.axes.context_topology import (
             classify_context_topology,
-        )
-        from freerelay.data_plane.profiler.axes.tool_dependence import (
-            classify_tool_dependence,
         )
         from freerelay.data_plane.profiler.axes.determinism_needs import (
             classify_determinism_needs,
         )
-        from freerelay.data_plane.profiler.axes.safety_posture import (
-            classify_safety_posture,
+        from freerelay.data_plane.profiler.axes.economic_policy import (
+            classify_economic_policy,
+        )
+        from freerelay.data_plane.profiler.axes.latency_class import (
+            classify_latency_class,
         )
         from freerelay.data_plane.profiler.axes.output_contract import (
             classify_output_contract,
         )
-        from freerelay.data_plane.profiler.axes.economic_policy import (
-            classify_economic_policy,
+        from freerelay.data_plane.profiler.axes.precision_sensitivity import (
+            classify_precision_sensitivity,
+        )
+        from freerelay.data_plane.profiler.axes.required_depth import (
+            classify_required_depth,
+        )
+        from freerelay.data_plane.profiler.axes.safety_posture import (
+            classify_safety_posture,
+        )
+        from freerelay.data_plane.profiler.axes.task_family import classify_task_family
+        from freerelay.data_plane.profiler.axes.tool_dependence import (
+            classify_tool_dependence,
         )
 
         self._classifiers = {

@@ -11,8 +11,6 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 
-import httpx
-
 logger = logging.getLogger("freerelay.cancellation")
 
 
@@ -27,6 +25,10 @@ class CancellableRequest:
     def __init__(self) -> None:
         self._task: asyncio.Task[None] | None = None
         self._cancelled = False
+
+    def set_task(self, task: asyncio.Task[None]) -> None:
+        """Set the underlying async task for cancellation."""
+        self._task = task
 
     def cancel(self) -> None:
         """Cancel the in-flight request."""

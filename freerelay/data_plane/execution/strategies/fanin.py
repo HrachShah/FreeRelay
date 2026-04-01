@@ -7,7 +7,6 @@ Collect outputs from multiple upstream steps, merge into single prompt.
 from __future__ import annotations
 
 import time
-from typing import Any
 
 from freerelay.data_plane.execution.dag_engine import (
     ExecutionContext,

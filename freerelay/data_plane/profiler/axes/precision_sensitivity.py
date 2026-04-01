@@ -66,10 +66,10 @@ def classify_precision_sensitivity(
     Returns:
         (precision_level, confidence) — precision_level in {low, medium, high}.
     """
-    from freerelay.data_plane.profiler.axes.task_family import classify_task_family
     from freerelay.data_plane.profiler.axes.output_contract import (
         classify_output_contract,
     )
+    from freerelay.data_plane.profiler.axes.task_family import classify_task_family
 
     task_family, _ = classify_task_family(request, headers)
     output_contract, _ = classify_output_contract(request, headers)

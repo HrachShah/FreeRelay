@@ -56,7 +56,6 @@ async def execute(
         )
 
         plan_content = await _call_llm(router, step, plan_prompt)
-        total_tokens = 0
 
         try:
             subtasks = json.loads(plan_content)
@@ -111,7 +110,7 @@ async def execute(
             final_content = merge_parts[0]
         else:
             merge_prompt = (
-                f"Combine these subtask results into a coherent final response:\n\n"
+                "Combine these subtask results into a coherent final response:\n\n"
                 + "\n\n".join(merge_parts)
                 + f"\n\nOriginal request:\n{original_text}\n\n"
                 f"Provide the unified final answer."

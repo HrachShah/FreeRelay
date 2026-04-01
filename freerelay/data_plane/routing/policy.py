@@ -9,17 +9,18 @@ from __future__ import annotations
 
 import logging
 import operator
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import yaml
 
 logger = logging.getLogger("freerelay.data_plane.policy")
 
 
-class Operator(str, Enum):
+class Operator(StrEnum):
     """Comparison operators for policy conditions."""
     EQ = "eq"
     NEQ = "neq"
@@ -183,7 +184,7 @@ class PolicyDSL:
     def load_policy_file(self, path: Path) -> list[Policy]:
         """Load policies from a YAML file."""
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 return self.load_policy(f.read())
         except FileNotFoundError:
             logger.warning("Policy file not found: %s", path)

@@ -7,12 +7,10 @@ Supports Redis stream storage with configurable retention.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import time
 import uuid
-from dataclasses import dataclass, field
 from typing import Any
 
 from freerelay.shared.models.internal import AuditRecord

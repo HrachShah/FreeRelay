@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any
 
 from freerelay.data_plane.execution.dag_engine import (
     ExecutionContext,
@@ -83,10 +82,7 @@ async def execute(
 
         # Check pairwise similarity
         contents = [r[0] for r in successful]
-        if len(contents) >= 2:
-            similarity = _pairwise_similarity(contents)
-        else:
-            similarity = 1.0
+        similarity = _pairwise_similarity(contents) if len(contents) >= 2 else 1.0
 
         total_tokens = sum(r[2] for r in successful)
 

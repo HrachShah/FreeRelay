@@ -7,7 +7,6 @@ Verifier checks response for factual consistency and correctness.
 from __future__ import annotations
 
 import time
-from typing import Any
 
 from freerelay.data_plane.execution.dag_engine import (
     ExecutionContext,

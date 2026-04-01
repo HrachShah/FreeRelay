@@ -6,7 +6,7 @@ Route to one provider using expected utility scoring.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from freerelay.data_plane.execution.dag_engine import (
     ExecutionContext,

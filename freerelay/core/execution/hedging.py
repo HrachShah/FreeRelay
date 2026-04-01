@@ -9,6 +9,7 @@ Return whichever responds first. Cancel the other.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 
 from freerelay.core.models.openai import (
@@ -45,9 +46,7 @@ async def hedged_execute(
     targets = providers[:2]
 
     tasks: dict[asyncio.Task[ChatCompletionResponse], BaseProvider] = {
-        asyncio.create_task(
-            provider.complete(request, api_key)
-        ): provider
+        asyncio.create_task(provider.complete(request, api_key)): provider
         for provider, api_key in targets
     }
 
@@ -59,23 +58,20 @@ async def hedged_execute(
     # Cancel all pending tasks immediately
     for task in pending:
         task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError, Exception):
             await task
-        except (asyncio.CancelledError, Exception):
-            pass
 
-    # Get the first result
-    result_task = done.pop()
-    winner = tasks[result_task]
+    # Check all done tasks for a successful result
+    # done may contain 1 or 2 tasks (both completed before cancellation)
+    errors: list[BaseException] = []
+    for task in done:
+        if task.exception() is None:
+            winner = tasks[task]
+            logger.info("Hedged winner: %s", winner.name)
+            # Cancel any remaining done tasks that weren't checked yet
+            return task.result()
+        errors.append(task.exception())  # type: ignore[arg-type]
 
-    if result_task.exception():
-        # If the winner also failed, check if there are other done tasks
-        for other in done:
-            if not other.exception():
-                logger.info("Hedged fallback to %s", tasks[other].name)
-                return other.result()
-        # All failed
-        raise result_task.exception()  # type: ignore[misc]
-
-    logger.info("Hedged winner: %s", winner.name)
-    return result_task.result()
+    # All done tasks failed
+    logger.warning("All hedged providers failed (%d errors)", len(errors))
+    raise errors[0]
