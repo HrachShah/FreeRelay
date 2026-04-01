@@ -30,7 +30,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from freerelay.config.settings import Settings
-from freerelay.core.models.openai import ModelObject
 
 
 @dataclass
@@ -182,11 +181,11 @@ class OpenClawAdapter:
             "#   Model:    freerelay/auto",
             "",
             "# Option 2: Non-interactive (CI/scripted)",
-            f"openclaw onboard --non-interactive --accept-risk \\",
-            f"  --auth-choice apiKey \\",
-            f"  --token-provider custom \\",
+            "openclaw onboard --non-interactive --accept-risk \\",
+            "  --auth-choice apiKey \\",
+            "  --token-provider custom \\",
             f'  --custom-base-url "{url}" \\',
-            f"  --install-daemon --skip-channels --skip-skills",
+            "  --install-daemon --skip-channels --skip-skills",
             "",
             "# Option 3: Set model after onboarding",
             "openclaw models set freerelay/auto",

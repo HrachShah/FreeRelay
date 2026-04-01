@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import logging
 import time
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -46,12 +46,12 @@ def get_engine() -> RoutingEngine | None:
 
 def _build_engine(settings: Settings) -> RoutingEngine:
     """Build the routing engine and register providers based on mode."""
-    from freerelay.providers.groq import GroqProvider
     from freerelay.providers.google import GoogleProvider
-    from freerelay.providers.openrouter import OpenRouterProvider
-    from freerelay.providers.together import TogetherProvider
+    from freerelay.providers.groq import GroqProvider
     from freerelay.providers.mistral import MistralProvider
     from freerelay.providers.nvidia import NVIDIAProvider
+    from freerelay.providers.openrouter import OpenRouterProvider
+    from freerelay.providers.together import TogetherProvider
 
     engine = RoutingEngine(settings)
     keys = settings.keys
@@ -361,9 +361,9 @@ def create_app() -> FastAPI:
     @app.get("/metrics")
     async def metrics() -> Response:
         from freerelay.observability.metrics import (
+            CONTENT_TYPE_LATEST,
             PROMETHEUS_AVAILABLE,
             generate_latest,
-            CONTENT_TYPE_LATEST,
         )
 
         if not PROMETHEUS_AVAILABLE:
