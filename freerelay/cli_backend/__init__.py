@@ -56,6 +56,15 @@ _SENSITIVE_ENV_VARS = frozenset(
     }
 )
 
+# Environment variables to KEEP for specific backends
+_BACKEND_ENV_VARS: dict[str, list[str]] = {
+    "codex-cli": [
+        "CHATGPT_OAUTH_TOKEN",
+        "OPENAI_OAUTH_TOKEN",
+    ],
+    "opencode-cli": [],  # OpenCode free models need no env vars
+}
+
 
 @dataclass
 class CLIBackendConfig:
@@ -79,11 +88,19 @@ def _get_command(backend_name: str) -> list[str]:
     return list(cmd)
 
 
-def _sanitize_env() -> dict[str, str]:
-    """Create a clean environment for subprocess, removing API keys."""
+def _sanitize_env(backend_name: str = "") -> dict[str, str]:
+    """
+    Create a clean environment for subprocess.
+
+    Removes API keys for security, but preserves backend-specific
+    tokens (e.g., ChatGPT OAuth tokens for Codex CLI).
+    """
     env = os.environ.copy()
+
+    # Remove all provider API keys
     for key in _SENSITIVE_ENV_VARS:
         env.pop(key, None)
+
     return env
 
 
@@ -169,7 +186,7 @@ class CLIBackend:
         if session_id:
             cmd.extend(["--session", session_id])
 
-        env = _sanitize_env()
+        env = _sanitize_env(self.backend_name)
         request_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
         start_time = time.time()
 
@@ -316,7 +333,7 @@ class CLIBackend:
         if session_id:
             cmd.extend(["--session", session_id])
 
-        env = _sanitize_env()
+        env = _sanitize_env(self.backend_name)
 
         proc = await asyncio.create_subprocess_exec(
             *cmd,

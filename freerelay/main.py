@@ -445,29 +445,42 @@ def create_app() -> FastAPI:
             ],
         }
 
-    # ── OpenCode Integration ────────────────────────────────────────
+    # ── OpenCode & Codex Integration ─────────────────────────────────
     @app.get("/opencode/models")
     async def opencode_models() -> dict[str, object]:
         """
-        List all available OpenCode models (Zen + Go catalogs).
+        List available OpenCode models.
 
-        Each model is prefixed with 'freerelay/' for OpenClaw compatibility.
+        Free models (-free suffix) work without auth.
+        Paid models require OPENCODE_API_KEY.
         """
-        from freerelay.providers.opencode import get_opencode_models
+        from freerelay.providers.opencode import (
+            fetch_opencode_models,
+            get_known_free_models,
+        )
 
-        models = get_opencode_models()
+        api_key = settings.keys.opencode_api_key
+        models = await fetch_opencode_models(api_key)
+        if not models:
+            models = get_known_free_models()
+
         return {
             "object": "list",
             "data": [
                 {
-                    "id": m["id"],
+                    "id": f"opencode/{m['id']}",
                     "object": "model",
                     "owned_by": "opencode",
                     "name": m["name"],
-                    "catalog": m["catalog"],
+                    "free": m.get("free", False),
                 }
                 for m in models
             ],
+            "auth_required": bool(api_key),
+            "note": (
+                "Models ending in -free work without auth. "
+                "Other models require OPENCODE_API_KEY."
+            ),
         }
 
     @app.get("/opencode/config")
@@ -476,9 +489,7 @@ def create_app() -> FastAPI:
         base_url: str | None = None,
     ) -> dict[str, object]:
         """
-        Generate OpenClaw config for OpenCode integration.
-
-        Returns config to add OpenCode Zen/Go as providers in OpenClaw.
+        Generate OpenClaw config for OpenCode + Codex integration.
         """
         if base_url is None:
             scheme = request.url.scheme
@@ -488,38 +499,36 @@ def create_app() -> FastAPI:
 
         return {
             "providers": {
-                "opencode-zen": {
+                "opencode": {
                     "baseUrl": base_url,
-                    "apiKey": settings.keys.opencode_api_key or "not-needed",
+                    "apiKey": settings.keys.opencode_api_key or "",
                     "api": "openai-completions",
                     "models": [
-                        {"id": "freerelay/opencode-claude-sonnet"},
-                        {"id": "freerelay/opencode-claude-haiku"},
-                        {"id": "freerelay/opencode-gpt-4o"},
-                        {"id": "freerelay/opencode-gpt-4o-mini"},
-                        {"id": "freerelay/opencode-gemini-flash"},
-                        {"id": "freerelay/opencode-gemini-pro"},
+                        {
+                            "id": "opencode/mimo-v2-pro-free",
+                            "free": True,
+                            "note": "No auth required",
+                        },
                     ],
+                    "auth_note": (
+                        "Free models (-free suffix) need no API key. "
+                        "Set OPENCODE_API_KEY for paid models."
+                    ),
                 },
-                "opencode-go": {
+                "codex": {
                     "baseUrl": base_url,
-                    "apiKey": settings.keys.opencode_api_key or "not-needed",
                     "api": "openai-completions",
+                    "auth": {
+                        "type": "oauth",
+                        "provider": "chatgpt",
+                        "setup": "Run 'openclaw configure' to authenticate",
+                    },
                     "models": [
-                        {"id": "freerelay/opencode-kimi-k2"},
-                        {"id": "freerelay/opencode-glm-4"},
-                        {"id": "freerelay/opencode-minimax-01"},
+                        {"id": "codex/codex-mini-latest"},
+                        {"id": "codex/o4-mini"},
+                        {"id": "codex/gpt-4.1"},
                     ],
                 },
-            },
-            "setup": {
-                "env_vars": [
-                    "OPENCODE_API_KEY=your_opencode_key_here",
-                ],
-                "instructions": (
-                    "Set OPENCODE_API_KEY in your .env file, then use any "
-                    "opencode-* model via /v1/chat/completions."
-                ),
             },
         }
 
@@ -536,6 +545,13 @@ def create_app() -> FastAPI:
             "backends": list_available_backends(),
             "config": get_backend_config(),
         }
+
+    @app.get("/codex/auth-status")
+    async def codex_auth_status() -> dict[str, object]:
+        """Check ChatGPT OAuth token status for Codex provider."""
+        from freerelay.providers.codex import get_codex_token_status
+
+        return get_codex_token_status()
 
     @app.post("/opencode/cli-run")
     async def opencode_cli_run(request: Request) -> Response:

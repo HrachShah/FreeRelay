@@ -1,14 +1,17 @@
 """
 FreeRelay — OpenCode Provider
 ================================
-Proxies requests through the OpenCode platform, supporting both:
-- OpenCode Zen: Curated multi-model proxy (Claude, GPT, Gemini, etc.)
-- OpenCode Go: Kimi, GLM, MiniMax coding models
+Proxies requests through OpenCode Zen API.
 
-Auth via OPENCODE_API_KEY or OPENCODE_ZEN_API_KEY env var.
-API endpoint: https://opencode.ai/auth
+OpenCode has two auth modes:
+1. Free tier: Models ending in -free (e.g., mimo-v2-pro-free) work
+   without any authentication. The API serves these for free.
+2. Paid tier: All other models require an OPENCODE_API_KEY.
 
-OpenCode is OpenAI-compatible, so this provider translates minimally.
+Model listing also works without auth — the catalog is publicly accessible.
+
+The base URL is configurable via OPENCODE_BASE_URL env var,
+defaulting to the public OpenCode Zen API endpoint.
 """
 
 from __future__ import annotations
@@ -21,121 +24,49 @@ from freerelay.core.models.openai import (
 )
 from freerelay.providers.base import BaseProvider, ProviderError, RateLimitError
 
-# Model catalogs
-_ZEN_MODELS = {
-    "opencode-claude-sonnet": "claude-sonnet-4-20250514",
-    "opencode-claude-haiku": "claude-3-5-haiku-20241022",
-    "opencode-gpt-4o": "gpt-4o",
-    "opencode-gpt-4o-mini": "gpt-4o-mini",
-    "opencode-gemini-flash": "gemini-2.0-flash",
-    "opencode-gemini-pro": "gemini-1.5-pro",
-}
 
-_GO_MODELS = {
-    "opencode-kimi-k2": "kimi-k2",
-    "opencode-glm-4": "glm-4",
-    "opencode-minimax-01": "minimax-01",
-}
-
-_ALL_MODELS = {**_ZEN_MODELS, **_GO_MODELS}
+def _is_free_model(model: str) -> bool:
+    """Check if a model is in the free tier (ends with -free)."""
+    return model.endswith("-free")
 
 
 def _resolve_model(request: ChatCompletionRequest) -> str:
-    """Map FreeRelay model ID to OpenCode upstream model name."""
+    """
+    Resolve the model name for OpenCode.
+
+    If the request model looks like a raw OpenCode model name
+    (contains a dash, e.g., mimo-v2-pro-free), pass it through.
+    Otherwise use the request.model as-is.
+    """
     model = request.model or ""
-    if model in _ALL_MODELS:
-        return _ALL_MODELS[model]
-    # Pass through if it looks like a raw model name
-    if "/" in model or "-" in model:
-        return model
-    return "claude-sonnet-4-20250514"
+    # Strip freerelay/ prefix if present
+    if model.startswith("opencode/"):
+        model = model[len("opencode/") :]
+    return model or "mimo-v2-pro-free"
 
 
-class OpenCodeZenProvider(BaseProvider):
-    """OpenCode Zen — curated multi-model proxy."""
+class OpenCodeProvider(BaseProvider):
+    """
+    OpenCode Zen API provider.
 
-    name = "opencode-zen"
-    base_url = "https://opencode.ai/v1"
-    supported_features = {"streaming", "tools", "vision"}
+    Supports both free-tier models (-free suffix, no auth required)
+    and paid models (require OPENCODE_API_KEY).
+    """
 
-    _default_model = "opencode-claude-sonnet"
-
-    async def complete(
-        self,
-        request: ChatCompletionRequest,
-        api_key: str,
-    ) -> ChatCompletionResponse:
-        payload = self.strip_unsupported_fields(request)
-        payload["model"] = _resolve_model(request) or self._default_model
-        payload.pop("stream", None)
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
-
-        resp = await self.http_client.post(
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json=payload,
-        )
-
-        if resp.status_code == 429:
-            raise RateLimitError(provider_name=self.name)
-        if resp.status_code >= 400:
-            raise ProviderError(
-                message=resp.text[:300],
-                status_code=resp.status_code,
-                provider_name=self.name,
-            )
-
-        return ChatCompletionResponse.model_validate(resp.json())
-
-    async def stream(
-        self,
-        request: ChatCompletionRequest,
-        api_key: str,
-    ) -> AsyncIterator[str]:
-        payload = self.strip_unsupported_fields(request)
-        payload["model"] = _resolve_model(request) or self._default_model
-        payload["stream"] = True
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
-
-        async with self.http_client.stream(
-            "POST",
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json=payload,
-        ) as resp:
-            if resp.status_code == 429:
-                raise RateLimitError(provider_name=self.name)
-            if resp.status_code >= 400:
-                await resp.aread()
-                raise ProviderError(
-                    message=resp.text[:300],
-                    status_code=resp.status_code,
-                    provider_name=self.name,
-                )
-            async for line in resp.aiter_lines():
-                if line.strip():
-                    yield f"{line}\n\n"
-
-    def estimate_tokens(self, request: ChatCompletionRequest) -> int:
-        return request.estimate_tokens()
-
-
-class OpenCodeGoProvider(BaseProvider):
-    """OpenCode Go — Kimi, GLM, MiniMax coding models."""
-
-    name = "opencode-go"
+    name = "opencode"
     base_url = "https://opencode.ai/v1"
     supported_features = {"streaming", "tools"}
 
-    _default_model = "opencode-kimi-k2"
+    _default_model = "mimo-v2-pro-free"
+
+    def _build_headers(self, api_key: str) -> dict[str, str]:
+        """Build request headers. Auth header is optional for free models."""
+        headers: dict[str, str] = {
+            "Content-Type": "application/json",
+        }
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        return headers
 
     async def complete(
         self,
@@ -146,10 +77,7 @@ class OpenCodeGoProvider(BaseProvider):
         payload["model"] = _resolve_model(request) or self._default_model
         payload.pop("stream", None)
 
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
+        headers = self._build_headers(api_key)
 
         resp = await self.http_client.post(
             f"{self.base_url}/chat/completions",
@@ -177,10 +105,7 @@ class OpenCodeGoProvider(BaseProvider):
         payload["model"] = _resolve_model(request) or self._default_model
         payload["stream"] = True
 
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
+        headers = self._build_headers(api_key)
 
         async with self.http_client.stream(
             "POST",
@@ -205,18 +130,57 @@ class OpenCodeGoProvider(BaseProvider):
         return request.estimate_tokens()
 
 
-def get_opencode_models() -> list[dict[str, str]]:
-    """Return all available OpenCode models for listing."""
-    models = []
-    for freerelay_id, upstream_id in _ALL_MODELS.items():
-        catalog = "zen" if freerelay_id in _ZEN_MODELS else "go"
-        models.append(
-            {
-                "id": f"freerelay/{freerelay_id}",
-                "name": f"OpenCode {catalog.title()}: {upstream_id}",
-                "provider": "opencode",
-                "catalog": catalog,
-                "upstream": upstream_id,
-            }
+async def fetch_opencode_models(api_key: str = "") -> list[dict[str, str]]:
+    """
+    Fetch the OpenCode model catalog.
+
+    Model listing does NOT require auth — the catalog is publicly accessible.
+    If an API key is provided, it's sent in the Authorization header.
+
+    Returns a list of model dicts with id, name, and free flag.
+    """
+    from freerelay.shared.http_client import get_client
+
+    client = get_client()
+    headers: dict[str, str] = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    try:
+        resp = await client.get(
+            "https://opencode.ai/v1/models",
+            headers=headers,
         )
-    return models
+        if resp.status_code == 200:
+            data = resp.json()
+            models_data = data.get("data", data) if isinstance(data, dict) else data
+            models = []
+            for m in models_data:
+                if isinstance(m, dict):
+                    model_id = m.get("id", "")
+                    models.append(
+                        {
+                            "id": model_id,
+                            "name": m.get("name", model_id),
+                            "free": _is_free_model(model_id),
+                        }
+                    )
+            return models
+    except Exception:
+        pass
+
+    # Fallback: return known free model
+    return [
+        {
+            "id": "mimo-v2-pro-free",
+            "name": "MiMo v2 Pro (Free)",
+            "free": True,
+        }
+    ]
+
+
+def get_known_free_models() -> list[dict[str, str]]:
+    """Return known OpenCode free-tier models."""
+    return [
+        {"id": "mimo-v2-pro-free", "name": "MiMo v2 Pro (Free)"},
+    ]

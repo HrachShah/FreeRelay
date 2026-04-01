@@ -130,21 +130,30 @@ def get_skills_config() -> dict[str, Any]:
                 "type": "cli",
                 "command": ["opencode", "run", "--format", "json"],
                 "parser": "parsed.part.text",
+                "auth": {
+                    "type": "none",
+                    "note": "Free models (-free suffix) need no auth. "
+                    "Optional: set OPENCODE_API_KEY for paid models.",
+                },
                 "models": [
-                    "opencode-claude-sonnet",
-                    "opencode-claude-haiku",
-                    "opencode-gpt-4o",
-                    "opencode-kimi-k2",
-                    "opencode-glm-4",
+                    "mimo-v2-pro-free",
                 ],
             },
             "codex": {
                 "name": "Codex",
-                "description": "AI coding assistant via Codex CLI",
+                "description": "AI coding assistant via Codex CLI (ChatGPT OAuth)",
                 "type": "cli",
                 "command": ["codex", "run", "--format", "json"],
                 "parser": "parsed.item.text",
-                "models": ["gpt-4o", "gpt-4o-mini"],
+                "auth": {
+                    "type": "oauth",
+                    "provider": "chatgpt",
+                    "setup": (
+                        "Run 'openclaw configure' to authenticate via ChatGPT OAuth"
+                    ),
+                    "env_vars": ["CHATGPT_OAUTH_TOKEN"],
+                },
+                "models": ["codex-mini-latest", "o4-mini", "gpt-4.1"],
             },
             "coding-supervisor": {
                 "name": "Coding Supervisor",

@@ -29,8 +29,11 @@ class ProviderKeys(BaseSettings):
     openai_api_key: str = ""
     anthropic_api_key: str = ""
 
-    # OpenCode platform keys (optional)
-    opencode_api_key: str = ""  # OPENCODE_API_KEY or OPENCODE_ZEN_API_KEY
+    # OpenCode platform (optional — free models need no key)
+    opencode_api_key: str = ""  # OPENCODE_API_KEY
+
+    # ChatGPT OAuth for Codex (optional)
+    chatgpt_oauth_token: str = ""  # CHATGPT_OAUTH_TOKEN
 
 
 class Settings(BaseSettings):
