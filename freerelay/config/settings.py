@@ -29,6 +29,9 @@ class ProviderKeys(BaseSettings):
     openai_api_key: str = ""
     anthropic_api_key: str = ""
 
+    # OpenCode platform keys (optional)
+    opencode_api_key: str = ""  # OPENCODE_API_KEY or OPENCODE_ZEN_API_KEY
+
 
 class Settings(BaseSettings):
     """Master settings for FreeRelay."""

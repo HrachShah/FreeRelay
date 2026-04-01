@@ -248,6 +248,8 @@ The control plane owns tenant policy objects, capability registry, benchmark cat
 | Policy DSL + experimentation | ✓ | – | – | – |
 | Streaming backpressure | ✓ | ✓ | ✓ | N/A |
 | OpenAI SDK compatible | ✓ | ✓ | ✓ | ✓ |
+| OpenCode/Codex CLI backends | ✓ | – | – | – |
+| Skills (coding-supervisor) | ✓ | – | – | – |
 
 
 
@@ -362,6 +364,70 @@ Use `freerelay/auto` as the model for workload-aware routing across all free pro
 For more details, see [docs/openclaw-integration.md](docs/openclaw-integration.md).
 </details>
 
+<details>
+<summary><strong>OpenCode & Codex</strong></summary>
+
+FreeRelay integrates with OpenCode as both an **API proxy** and **CLI backend**, plus Codex as a CLI backend.
+
+**OpenCode API Proxy (Zen + Go catalogs):**
+```bash
+# Set your OpenCode API key
+echo "OPENCODE_API_KEY=your_key_here" >> .env
+
+# Use OpenCode Zen models (Claude, GPT, Gemini)
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"freerelay/opencode-claude-sonnet","messages":[{"role":"user","content":"Hello"}]}'
+
+# Use OpenCode Go models (Kimi, GLM, MiniMax)
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"freerelay/opencode-kimi-k2","messages":[{"role":"user","content":"Write a function"}]}'
+```
+
+**List OpenCode models:**
+```bash
+curl http://localhost:8000/opencode/models
+```
+
+**CLI Backend (spawn OpenCode/Codex as subprocess):**
+```bash
+# Check which CLI backends are available
+curl http://localhost:8000/opencode/cli-backends
+
+# Run a coding task via OpenCode CLI
+curl -X POST http://localhost:8000/opencode/cli-run \
+  -H "Content-Type: application/json" \
+  -d '{"backend":"opencode-cli","prompt":"Write a Python hello world","model":"opencode-claude-sonnet"}'
+
+# Run via Codex CLI
+curl -X POST http://localhost:8000/opencode/cli-run \
+  -H "Content-Type: application/json" \
+  -d '{"backend":"codex-cli","prompt":"Write a Python hello world"}'
+```
+
+**Skills:**
+```bash
+# List available skills
+curl http://localhost:8000/skills
+
+# Get skills config for OpenClaw
+curl http://localhost:8000/skills/config
+```
+
+| Model ID | Catalog | Upstream |
+|----------|---------|----------|
+| `freerelay/opencode-claude-sonnet` | Zen | Claude Sonnet |
+| `freerelay/opencode-claude-haiku` | Zen | Claude Haiku |
+| `freerelay/opencode-gpt-4o` | Zen | GPT-4o |
+| `freerelay/opencode-gemini-flash` | Zen | Gemini Flash |
+| `freerelay/opencode-kimi-k2` | Go | Kimi K2 |
+| `freerelay/opencode-glm-4` | Go | GLM-4 |
+| `freerelay/opencode-minimax-01` | Go | MiniMax |
+
+CLI backends communicate via JSONL subprocess with API keys cleared from the environment for security.
+</details>
+
 ## Docker
 
 ```bash
@@ -418,10 +484,12 @@ freerelay/
 │   │       ├── circuit_breaker.py # CLOSED→OPEN→HALF_OPEN
 │   │       ├── budget.py          # EWMA budget forecaster
 │   │       └── chaos.py           # Chaos engineering injector
-│   ├── providers/                 # Groq, Google, OpenRouter, Together, Mistral
+│   ├── providers/                 # Groq, Google, OpenRouter, Together, Mistral, OpenCode
 │   ├── middleware/                # Auth, audit
 │   ├── observability/             # Prometheus, structlog, health probes
 │   ├── openclaw/                  # OpenClaw integration adapter
+│   ├── cli_backend/               # OpenCode/Codex CLI subprocess backends
+│   ├── skills/                    # Coding skills (OpenCode, Codex, Supervisor)
 │   └── cli/                       # Typer CLI
 ├── tests/                         # Unit + integration tests
 ├── docker/                        # Dockerfile + compose stack

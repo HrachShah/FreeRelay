@@ -445,6 +445,159 @@ def create_app() -> FastAPI:
             ],
         }
 
+    # ── OpenCode Integration ────────────────────────────────────────
+    @app.get("/opencode/models")
+    async def opencode_models() -> dict[str, object]:
+        """
+        List all available OpenCode models (Zen + Go catalogs).
+
+        Each model is prefixed with 'freerelay/' for OpenClaw compatibility.
+        """
+        from freerelay.providers.opencode import get_opencode_models
+
+        models = get_opencode_models()
+        return {
+            "object": "list",
+            "data": [
+                {
+                    "id": m["id"],
+                    "object": "model",
+                    "owned_by": "opencode",
+                    "name": m["name"],
+                    "catalog": m["catalog"],
+                }
+                for m in models
+            ],
+        }
+
+    @app.get("/opencode/config")
+    async def opencode_config(
+        request: Request,
+        base_url: str | None = None,
+    ) -> dict[str, object]:
+        """
+        Generate OpenClaw config for OpenCode integration.
+
+        Returns config to add OpenCode Zen/Go as providers in OpenClaw.
+        """
+        if base_url is None:
+            scheme = request.url.scheme
+            host = request.url.hostname or "localhost"
+            port = request.url.port or settings.port
+            base_url = f"{scheme}://{host}:{port}/v1"
+
+        return {
+            "providers": {
+                "opencode-zen": {
+                    "baseUrl": base_url,
+                    "apiKey": settings.keys.opencode_api_key or "not-needed",
+                    "api": "openai-completions",
+                    "models": [
+                        {"id": "freerelay/opencode-claude-sonnet"},
+                        {"id": "freerelay/opencode-claude-haiku"},
+                        {"id": "freerelay/opencode-gpt-4o"},
+                        {"id": "freerelay/opencode-gpt-4o-mini"},
+                        {"id": "freerelay/opencode-gemini-flash"},
+                        {"id": "freerelay/opencode-gemini-pro"},
+                    ],
+                },
+                "opencode-go": {
+                    "baseUrl": base_url,
+                    "apiKey": settings.keys.opencode_api_key or "not-needed",
+                    "api": "openai-completions",
+                    "models": [
+                        {"id": "freerelay/opencode-kimi-k2"},
+                        {"id": "freerelay/opencode-glm-4"},
+                        {"id": "freerelay/opencode-minimax-01"},
+                    ],
+                },
+            },
+            "setup": {
+                "env_vars": [
+                    "OPENCODE_API_KEY=your_opencode_key_here",
+                ],
+                "instructions": (
+                    "Set OPENCODE_API_KEY in your .env file, then use any "
+                    "opencode-* model via /v1/chat/completions."
+                ),
+            },
+        }
+
+    @app.get("/opencode/cli-backends")
+    async def opencode_cli_backends() -> dict[str, object]:
+        """
+        List available CLI backends (OpenCode CLI, Codex CLI).
+
+        Shows which backends are installed and available.
+        """
+        from freerelay.cli_backend import get_backend_config, list_available_backends
+
+        return {
+            "backends": list_available_backends(),
+            "config": get_backend_config(),
+        }
+
+    @app.post("/opencode/cli-run")
+    async def opencode_cli_run(request: Request) -> Response:
+        """
+        Run a CLI backend (OpenCode/Codex) with a prompt.
+
+        Body: {"backend": "opencode-cli", "prompt": "...", "model": "..."}
+        """
+        from freerelay.cli_backend import CLIBackend
+
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Invalid JSON body"},
+            )
+
+        backend_name = body.get("backend", "opencode-cli")
+        prompt = body.get("prompt", "")
+        model = body.get("model")
+        session_id = body.get("session_id")
+
+        if not prompt:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "prompt is required"},
+            )
+
+        try:
+            backend = CLIBackend(backend_name)
+            response = await backend.run(prompt, model=model, session_id=session_id)
+            return JSONResponse(content=response.model_dump(exclude_none=True))
+        except ValueError as e:
+            return JSONResponse(
+                status_code=400,
+                content={"error": str(e)},
+            )
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"CLI backend error: {str(e)[:200]}"},
+            )
+
+    @app.get("/skills")
+    async def list_skills() -> dict[str, object]:
+        """
+        List all available skills (OpenCode, Codex, Coding Supervisor).
+        """
+        from freerelay.skills import list_skills as _list_skills
+
+        return {"skills": _list_skills()}
+
+    @app.get("/skills/config")
+    async def skills_config() -> dict[str, object]:
+        """
+        Get skills configuration for OpenClaw integration.
+        """
+        from freerelay.skills import get_skills_config
+
+        return get_skills_config()
+
     return app
 
 
