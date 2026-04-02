@@ -39,20 +39,20 @@ FreeRelay is a **self-hosted AI gateway** that automatically chooses the best pr
 ┌────────────────┐       ┌────────────────────────────────────────┐
 │   Your App     │       │          FreeRelay Gateway             │
 │                │       │                                        │
-│  OpenAI SDK    │──────▶│  Task Complexity Detection            │
-│  LangChain     │       │  Smart Provider Routing               │
-│  raw HTTP      │       │  Circuit Breakers + Fallback          │
-│                │       │  Budget Forecasting                   │
+│  OpenAI SDK    │──────▶│  Task Complexity Detection             │
+│  LangChain     │       │  Smart Provider Routing                │ 
+│  raw HTTP      │       │  Circuit Breakers + Fallback           │
+│                │       │  Budget Forecasting                    │
 └────────────────┘       └─────────────┬──────────────────────────┘
                                        │
           ┌────────────────────────────┼────────────────────────────┐
           │                            │                            │
           ▼                            ▼                            ▼
    ┌─────────────┐             ┌─────────────┐              ┌─────────────┐
-   │   FREE      │             │   FREE     │              │    PAID     │
-   │   tier      │             │   tier     │              │    tier     │
-   │  Groq       │             │  OpenAI    │              │  GPT-4      │
-   │  Google     │             │  Anthropic │              │  Claude     │
+   │   FREE      │             │   FREE      │              |    PAID     │
+   │   tier      │             │   tier      │              │    tier     │
+   │  Groq       │             │  OpenAI     │              │    GPT-4    │
+   │  Google     │             │  Anthropic  │              │    Claude   │
    └─────────────┘             └─────────────┘              └─────────────┘
 ```
 
