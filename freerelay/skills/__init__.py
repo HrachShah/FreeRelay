@@ -16,7 +16,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from enum import StrEnum
+from freerelay._compat import StrEnum
 from typing import Any
 
 logger = logging.getLogger("freerelay.skills")

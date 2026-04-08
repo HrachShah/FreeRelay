@@ -12,11 +12,18 @@
 
 <p align="center">
   <a href="https://github.com/HrachShah/FreeRelay/actions"><img src="https://img.shields.io/github/actions/workflow/status/HrachShah/FreeRelay/ci.yml?style=flat-square&label=CI" alt="CI"></a>
+  <a href="https://github.com/HrachShah/FreeRelay/stargazers"><img src="https://img.shields.io/github/stars/HrachShah/FreeRelay?style=flat-square" alt="GitHub stars"></a>
   <img src="https://img.shields.io/badge/python-3.12+-3776ab?style=flat-square" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/free_providers-5-8b5cf6?style=flat-square" alt="5 Free Providers">
   <img src="https://img.shields.io/badge/paid_providers-2-f59e0b?style=flat-square" alt="2 Paid Providers">
   <img src="https://img.shields.io/badge/openai_compatible-100%25-06b6d4?style=flat-square" alt="OpenAI Compatible">
+</p>
+
+<p align="center">
+  <a href="https://github.com/HrachShah/FreeRelay/stargazers">⭐ Star this repo</a>
+  ·
+  <a href="https://github.com/HrachShah/FreeRelay/issues/new">💬 Open an issue</a>
 </p>
 
 ---
@@ -250,6 +257,20 @@ The control plane owns tenant policy objects, capability registry, benchmark cat
 | OpenAI SDK compatible | ✓ | ✓ | ✓ | ✓ |
 | OpenCode/Codex CLI backends | ✓ | – | – | – |
 | Skills (coding-supervisor) | ✓ | – | – | – |
+
+## ❤️ Support FreeRelay
+
+If FreeRelay saves you money or engineering time:
+
+1. **Star the repo** to help more builders discover it.
+2. **Share feedback in an issue** so we can prioritize what to build next.
+
+### Team docs snippet
+
+```md
+If FreeRelay helped your team, star the repo:
+https://github.com/HrachShah/FreeRelay
+```
 
 
 

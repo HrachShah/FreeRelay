@@ -15,7 +15,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import StrEnum
+from freerelay._compat import StrEnum
 from typing import Any
 
 import redis.asyncio as aioredis

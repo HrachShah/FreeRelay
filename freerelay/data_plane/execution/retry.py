@@ -89,7 +89,7 @@ class RetryConfig:
             self.retryable_status_codes = RETRYABLE_STATUS_CODES
 
 
-async def retry_with_backoff[T](
+async def retry_with_backoff(
     coro_factory: Callable[[], Coroutine[Any, Any, T]],
     max_retries: int = 3,
     base_delay: float = 1.0,
@@ -171,7 +171,7 @@ async def retry_with_backoff[T](
     raise RuntimeError("Retry loop exited without result or exception")
 
 
-async def retry_with_config[T](
+async def retry_with_config(
     coro_factory: Callable[[], Coroutine[Any, Any, T]],
     config: RetryConfig,
     on_retry: Callable[[int, Exception], None] | None = None,

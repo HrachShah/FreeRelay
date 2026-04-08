@@ -56,5 +56,7 @@ target-version = "py312"
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+  "asyncio: mark async tests run by the local pytest hook when pytest-asyncio is unavailable",
+]

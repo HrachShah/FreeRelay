@@ -7,16 +7,16 @@ routing, execution, observability, tenancy, and agent orchestration.
 
 from __future__ import annotations
 
-import enum
 import time
 import uuid
 
+from freerelay._compat import StrEnum
 from pydantic import BaseModel, Field
 
 # ─── Enums (§3.1 — Workload Axes) ────────────────────────────────────────────
 
 
-class TaskFamily(enum.StrEnum):
+class TaskFamily(StrEnum):
     """Top-level task classification."""
 
     CHAT = "chat"
@@ -29,7 +29,7 @@ class TaskFamily(enum.StrEnum):
     AGENT_LOOP = "agent_loop"
 
 
-class Depth(enum.StrEnum):
+class Depth(StrEnum):
     """Required reasoning depth."""
 
     SHALLOW = "shallow"
@@ -37,7 +37,7 @@ class Depth(enum.StrEnum):
     DEEP = "deep"
 
 
-class Sensitivity(enum.StrEnum):
+class Sensitivity(StrEnum):
     """Precision / factual sensitivity."""
 
     LOW = "low"
@@ -45,7 +45,7 @@ class Sensitivity(enum.StrEnum):
     HIGH = "high"
 
 
-class LatencyClass(enum.StrEnum):
+class LatencyClass(StrEnum):
     """Latency requirement class."""
 
     INTERACTIVE = "interactive"
@@ -53,7 +53,7 @@ class LatencyClass(enum.StrEnum):
     BATCH = "batch"
 
 
-class ContextTopology(enum.StrEnum):
+class ContextTopology(StrEnum):
     """Shape of the input context."""
 
     SHORT = "short"
@@ -63,7 +63,7 @@ class ContextTopology(enum.StrEnum):
     MULTIMODAL = "multimodal"
 
 
-class ToolDependence(enum.StrEnum):
+class ToolDependence(StrEnum):
     """How much the task depends on tool calls."""
 
     NONE = "none"
@@ -71,7 +71,7 @@ class ToolDependence(enum.StrEnum):
     MANDATORY = "mandatory"
 
 
-class Determinism(enum.StrEnum):
+class Determinism(StrEnum):
     """Required determinism of output."""
 
     LOW = "low"
@@ -79,7 +79,7 @@ class Determinism(enum.StrEnum):
     STRICT = "strict"
 
 
-class SafetyPosture(enum.StrEnum):
+class SafetyPosture(StrEnum):
     """Safety constraints for the request."""
 
     PERMISSIVE = "permissive"
@@ -87,7 +87,7 @@ class SafetyPosture(enum.StrEnum):
     LOCKED_DOWN = "locked_down"
 
 
-class OutputContract(enum.StrEnum):
+class OutputContract(StrEnum):
     """Expected output format."""
 
     PROSE = "prose"
@@ -97,7 +97,7 @@ class OutputContract(enum.StrEnum):
     TOOL_CALLS = "tool_calls"
 
 
-class EconomicPolicy(enum.StrEnum):
+class EconomicPolicy(StrEnum):
     """Cost optimization policy."""
 
     CHEAPEST = "cheapest"

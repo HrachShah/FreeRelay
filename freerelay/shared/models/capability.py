@@ -7,15 +7,15 @@ budget forecasting, and circuit breaker state.
 
 from __future__ import annotations
 
-import enum
 import time
 
+from freerelay._compat import StrEnum
 from pydantic import BaseModel, Field
 
 # ─── CircuitState (§10.2) ────────────────────────────────────────────────────
 
 
-class CircuitState(enum.StrEnum):
+class CircuitState(StrEnum):
     """Circuit breaker states."""
 
     CLOSED = "CLOSED"

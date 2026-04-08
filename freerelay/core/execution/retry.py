@@ -18,7 +18,7 @@ logger = logging.getLogger("freerelay.retry")
 T = TypeVar("T")
 
 
-async def retry_with_backoff[T](
+async def retry_with_backoff(
     func: Callable[[], Awaitable[T]],
     max_retries: int = 3,
     base_delay: float = 0.5,
