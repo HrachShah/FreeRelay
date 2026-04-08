@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import StrEnum
+from freerelay._compat import StrEnum
 
 from pydantic import BaseModel, Field
 

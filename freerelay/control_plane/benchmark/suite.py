@@ -7,7 +7,6 @@ Supports full suite runs and 10% spot-check sampling.
 
 from __future__ import annotations
 
-import enum
 import json
 import logging
 import random
@@ -15,12 +14,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from freerelay._compat import StrEnum
+
 logger = logging.getLogger(__name__)
 
 BENCHMARK_SUITE_DIR = Path("tests/benchmark_suite/prompts")
 
 
-class BenchmarkType(enum.StrEnum):
+class BenchmarkType(StrEnum):
     """Benchmark categories for provider evaluation."""
 
     JSON_SCHEMA = "json_schema"

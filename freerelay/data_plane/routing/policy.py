@@ -11,7 +11,7 @@ import logging
 import operator
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import StrEnum
+from freerelay._compat import StrEnum
 from pathlib import Path
 from typing import Any
 

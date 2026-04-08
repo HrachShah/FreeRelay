@@ -13,7 +13,7 @@ import time
 import uuid
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from enum import StrEnum
+from freerelay._compat import StrEnum
 from typing import Any
 
 import yaml

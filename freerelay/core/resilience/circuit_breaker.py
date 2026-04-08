@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from enum import StrEnum
+from freerelay._compat import StrEnum
 
 
 class CircuitState(StrEnum):
