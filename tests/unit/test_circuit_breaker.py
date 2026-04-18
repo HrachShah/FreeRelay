@@ -5,6 +5,7 @@ Verify all state transitions per spec §9.
 """
 
 import asyncio
+
 import pytest
 
 from freerelay.core.resilience.circuit_breaker import CircuitBreaker, CircuitState
@@ -60,34 +61,38 @@ class TestCircuitBreaker:
         assert breaker.state == CircuitState.CLOSED
 
     @pytest.mark.asyncio
-    async def test_open_to_half_open_after_timeout(self, breaker: CircuitBreaker) -> None:
+    async def test_open_to_half_open_after_timeout(
+        self, breaker: CircuitBreaker
+    ) -> None:
         for _ in range(3):
             await breaker.record_failure(500)
         assert breaker.state == CircuitState.OPEN
 
         await asyncio.sleep(1.1)
-        assert breaker.state == CircuitState.HALF_OPEN
+        assert breaker.state == CircuitState.HALF_OPEN  # type: ignore[comparison-overlap]
         assert await breaker.can_execute()
 
     @pytest.mark.asyncio
-    async def test_half_open_to_closed_on_success(self, breaker: CircuitBreaker) -> None:
+    async def test_half_open_to_closed_on_success(
+        self, breaker: CircuitBreaker
+    ) -> None:
         for _ in range(3):
             await breaker.record_failure(500)
         await asyncio.sleep(1.1)
-        assert breaker.state == CircuitState.HALF_OPEN
+        assert breaker.state == CircuitState.HALF_OPEN  # type: ignore[comparison-overlap]
 
         await breaker.record_success()
-        assert breaker.state == CircuitState.CLOSED
+        assert breaker.state == CircuitState.CLOSED  # type: ignore[comparison-overlap]
 
     @pytest.mark.asyncio
     async def test_half_open_to_open_on_failure(self, breaker: CircuitBreaker) -> None:
         for _ in range(3):
             await breaker.record_failure(500)
         await asyncio.sleep(1.1)
-        assert breaker.state == CircuitState.HALF_OPEN
+        assert breaker.state == CircuitState.HALF_OPEN  # type: ignore[comparison-overlap]
 
         await breaker.record_failure(500)
-        assert breaker.state == CircuitState.OPEN
+        assert breaker.state == CircuitState.OPEN  # type: ignore[comparison-overlap]
 
     @pytest.mark.asyncio
     async def test_none_status_counts_as_failure(self, breaker: CircuitBreaker) -> None:

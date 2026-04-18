@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     )
 
     # ── Mode ─────────────────────────────────────────────────
-    mode: str = "auto"  # "free", "paid", "auto" (auto = use free if available, paid if no free keys)
+    mode: str = "auto"  # "free", "paid", "auto" (auto=use free if available)
 
     # ── Server ────────────────────────────────────────────
     host: str = "0.0.0.0"
@@ -53,6 +53,18 @@ class Settings(BaseSettings):
     # ── Gateway Auth ──────────────────────────────────────
     api_key: str = ""  # If set, clients must send this as Bearer token
     enable_auth: bool = False
+    enable_supabase_auth: bool = False
+
+    # ── Supabase ──────────────────────────────────────────
+    supabase_url: str = ""
+    supabase_key: str = ""
+    supabase_service_role_key: str = ""
+
+    # ── Stripe ────────────────────────────────────────────
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_success_url: str = "http://localhost:8000/success"
+    stripe_cancel_url: str = "http://localhost:8000/cancel"
 
     # ── Redis ─────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379"

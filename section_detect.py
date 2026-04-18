@@ -1,6 +1,6 @@
-import zipfile
-import xml.etree.ElementTree as ET
 import re
+import xml.etree.ElementTree as ET
+import zipfile
 
 z = zipfile.ZipFile("FreeRelay_v3_MAX.zip")
 content = z.read("word/document.xml").decode("utf-8")

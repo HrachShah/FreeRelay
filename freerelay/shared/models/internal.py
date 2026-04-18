@@ -10,6 +10,7 @@ from __future__ import annotations
 import enum
 import time
 import uuid
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -278,13 +279,13 @@ class AgentRunState(BaseModel):
     tool_permission_scope: list[str] = Field(default_factory=list)
 
     current_plan: str = ""
-    completed_actions: list[dict] = Field(default_factory=list)
-    tool_outputs: list[dict] = Field(default_factory=list)
+    completed_actions: list[dict[str, Any]] = Field(default_factory=list)
+    tool_outputs: list[dict[str, Any]] = Field(default_factory=list)
     reasoning_summaries: list[str] = Field(default_factory=list)
-    rollback_points: list[dict] = Field(default_factory=list)
+    rollback_points: list[dict[str, Any]] = Field(default_factory=list)
 
     routing_history: list[RoutingDecision] = Field(default_factory=list)
-    tool_output_history: list[dict] = Field(default_factory=list)
+    tool_output_history: list[dict[str, Any]] = Field(default_factory=list)
 
 
 # ─── AuditRecord (§14.2) ────────────────────────────────────────────────────
@@ -305,6 +306,26 @@ class AuditRecord(BaseModel):
     signature: str = ""
 
 
+# ─── Auth & Billing ──────────────────────────────────────────────────────────
+
+
+class RegisterRequest(BaseModel):
+    email: str
+
+
+class RegisterResponse(BaseModel):
+    api_key: str
+
+
+class CheckoutRequest(BaseModel):
+    email: str
+    price_id: str
+
+
+class CheckoutResponse(BaseModel):
+    url: str
+
+
 # ─── ConversationState (§8.3) ────────────────────────────────────────────────
 
 
@@ -314,9 +335,9 @@ class ConversationState(BaseModel):
     session_id: str = Field(default_factory=lambda: f"sess_{uuid.uuid4().hex[:16]}")
     goals: list[str] = Field(default_factory=list)
     unresolved_questions: list[str] = Field(default_factory=list)
-    user_preferences: dict = Field(default_factory=dict)
-    tool_results: list[dict] = Field(default_factory=list)
+    user_preferences: dict[str, Any] = Field(default_factory=dict)
+    tool_results: list[dict[str, Any]] = Field(default_factory=list)
     constraints: list[str] = Field(default_factory=list)
-    decisions_made: list[dict] = Field(default_factory=list)
+    decisions_made: list[dict[str, Any]] = Field(default_factory=list)
     context_version: int = 0
     last_updated_ts: float = Field(default_factory=time.time)

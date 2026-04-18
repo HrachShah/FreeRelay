@@ -4,19 +4,19 @@ Tests — Router Integration
 Verify end-to-end routing with mocked providers.
 """
 
+from collections.abc import AsyncIterator
+
 import pytest
 
 from freerelay.config.settings import Settings
 from freerelay.core.models.openai import (
     ChatCompletionRequest,
     ChatCompletionResponse,
-    Choice,
     Message,
     Usage,
 )
 from freerelay.core.routing.engine import RoutingEngine
 from freerelay.providers.base import BaseProvider, ProviderError, RateLimitError
-from collections.abc import AsyncIterator
 
 
 class MockProvider(BaseProvider):
@@ -68,7 +68,7 @@ def settings() -> Settings:
 @pytest.fixture
 def request_obj() -> ChatCompletionRequest:
     return ChatCompletionRequest(
-        messages=[{"role": "user", "content": "Hello"}],
+        messages=[Message(role="user", content="Hello")],
     )
 
 
@@ -113,7 +113,8 @@ class TestRoutingEngine:
         engine.register_provider(MockProvider(should_fail=True), "key1")
 
         resp = await engine.route(request_obj)
-        assert "failed" in (resp.choices[0].message.content or "").lower()
+        content = resp.choices[0].message.content
+        assert isinstance(content, str) and "failed" in content.lower()
 
     @pytest.mark.asyncio
     async def test_no_providers(
@@ -121,7 +122,8 @@ class TestRoutingEngine:
     ) -> None:
         engine = RoutingEngine(settings)
         resp = await engine.route(request_obj)
-        assert "no providers" in (resp.choices[0].message.content or "").lower()
+        content = resp.choices[0].message.content
+        assert isinstance(content, str) and "no providers" in content.lower()
 
     @pytest.mark.asyncio
     async def test_stream_routing(

@@ -29,6 +29,7 @@ from freerelay.core.models.openai import (
     Message,
 )
 from freerelay.core.observability.outcome import OutcomeLogger, OutcomeRecord
+from freerelay.core.observability.supabase_logger import SupabaseUsageLogger
 from freerelay.core.resilience.budget import BudgetForecaster
 from freerelay.core.resilience.chaos import ChaosInjector
 from freerelay.core.resilience.circuit_breaker import CircuitBreaker
@@ -110,7 +111,7 @@ class RoutingEngine:
 
     Strategy:
       1. Profile the request and optimize context.
-      2. Score providers via expected utility (success × quality × schema × latency × cost × safety).
+      2. Score providers via expected utility (success, quality, latency, etc.).
       3. Apply routing policy to reorder/prefer providers.
       4. Execute with validation + repair loops and log outcomes for learning.
     """
@@ -138,6 +139,7 @@ class RoutingEngine:
         self.execution_planner = ExecutionPlanner()
         self.validator = ValidatorChain()
         self.outcome_logger = OutcomeLogger()
+        self.supabase_logger = SupabaseUsageLogger()
         self.max_repair_attempts = settings.max_repair_attempts
 
     def _load_capability_matrix(self, settings: Settings) -> CapabilityMatrix | None:
@@ -303,9 +305,9 @@ class RoutingEngine:
             name_to_slot = {slot.provider.name: slot for slot in ranked}
             reordered: list[ProviderSlot] = []
             for name in policy_order:
-                slot = name_to_slot.get(name)
-                if slot and slot not in reordered:
-                    reordered.append(slot)
+                p_slot = name_to_slot.get(name)
+                if p_slot and p_slot not in reordered:
+                    reordered.append(p_slot)
             for slot in ranked:
                 if slot not in reordered:
                     reordered.append(slot)
@@ -525,20 +527,20 @@ class RoutingEngine:
         alternatives: list[str],
         notes: str | None = None,
     ) -> None:
-        self.outcome_logger.log(
-            OutcomeRecord(
-                request_id=context.request_id,
-                selected_provider=provider_name,
-                alternatives=alternatives,
-                success=success,
-                schema_pass=schema_pass,
-                latency_ms=latency_ms,
-                cost_tokens=cost_tokens,
-                hallucination_signal=0.0,
-                downstream_success=None,
-                notes=notes,
-            )
+        record = OutcomeRecord(
+            request_id=context.request_id,
+            selected_provider=provider_name,
+            alternatives=alternatives,
+            success=success,
+            schema_pass=schema_pass,
+            latency_ms=latency_ms,
+            cost_tokens=cost_tokens,
+            hallucination_signal=0.0,
+            downstream_success=None,
+            notes=notes,
         )
+        self.outcome_logger.log(record)
+        self.supabase_logger.log(record)
 
     def get_stats(self) -> list[dict[str, object]]:
         return [
@@ -552,3 +554,19 @@ class RoutingEngine:
             }
             for slot in self.slots
         ]
+
+    def get_models(self) -> list[Any]:
+        """Aggregate models from all registered provider slots."""
+        from freerelay.core.models.openai import ModelObject
+
+        models = [
+            ModelObject(id="freerelay-auto", owned_by="freerelay"),
+        ]
+        for slot in self.slots:
+            models.append(
+                ModelObject(
+                    id=f"freerelay-{slot.provider.name}",
+                    owned_by="freerelay",
+                )
+            )
+        return models

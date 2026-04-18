@@ -4,7 +4,6 @@ Tests — Budget Forecaster
 Verify EWMA and budget exhaustion prediction per spec §10.
 """
 
-import pytest
 
 from freerelay.core.resilience.budget import BudgetForecaster
 

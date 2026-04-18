@@ -4,14 +4,17 @@ Tests — OpenAI Models
 Verify Pydantic models parse and serialize correctly.
 """
 
-import pytest
 
 from freerelay.core.models.openai import (
     ChatCompletionChunk,
     ChatCompletionRequest,
     ChatCompletionResponse,
+    ContentPart,
+    DeltaMessage,
+    Function,
     Message,
-    Usage,
+    StreamChoice,
+    Tool,
 )
 
 
@@ -19,7 +22,7 @@ class TestChatCompletionRequest:
     def test_basic_parse(self) -> None:
         req = ChatCompletionRequest(
             model="gpt-4",
-            messages=[{"role": "user", "content": "Hello"}],
+            messages=[Message(role="user", content="Hello")],
         )
         assert req.model == "gpt-4"
         assert len(req.messages) == 1
@@ -27,7 +30,7 @@ class TestChatCompletionRequest:
 
     def test_defaults(self) -> None:
         req = ChatCompletionRequest(
-            messages=[{"role": "user", "content": "Hi"}],
+            messages=[Message(role="user", content="Hi")],
         )
         assert req.stream is False
         assert req.n == 1
@@ -35,7 +38,7 @@ class TestChatCompletionRequest:
 
     def test_streaming_flag(self) -> None:
         req = ChatCompletionRequest(
-            messages=[{"role": "user", "content": "Hi"}],
+            messages=[Message(role="user", content="Hi")],
             stream=True,
         )
         assert req.is_streaming()
@@ -43,8 +46,8 @@ class TestChatCompletionRequest:
     def test_token_estimation(self) -> None:
         req = ChatCompletionRequest(
             messages=[
-                {"role": "system", "content": "You are helpful."},
-                {"role": "user", "content": "x" * 400},
+                Message(role="system", content="You are helpful."),
+                Message(role="user", content="x" * 400),
             ],
         )
         est = req.estimate_tokens()
@@ -52,28 +55,28 @@ class TestChatCompletionRequest:
 
     def test_with_tools(self) -> None:
         req = ChatCompletionRequest(
-            messages=[{"role": "user", "content": "Hi"}],
-            tools=[{
-                "type": "function",
-                "function": {
-                    "name": "get_weather",
-                    "description": "Get weather",
-                    "parameters": {"type": "object"},
-                },
-            }],
+            messages=[Message(role="user", content="Hi")],
+            tools=[Tool(
+                type="function",
+                function=Function(
+                    name="get_weather",
+                    description="Get weather",
+                    parameters={"type": "object"},
+                ),
+            )],
         )
-        assert len(req.tools) == 1
+        assert req.tools is not None and len(req.tools) == 1
         assert req.tools[0].function.name == "get_weather"
 
     def test_multi_modal_content(self) -> None:
         req = ChatCompletionRequest(
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "What is this?"},
-                    {"type": "image_url", "image_url": {"url": "https://example.com/img.png"}},
+            messages=[Message(
+                role="user",
+                content=[
+                    ContentPart(type="text", text="What is this?"),
+                    ContentPart(type="image_url", image_url={"url": "https://example.com/img.png"}),
                 ],
-            }],
+            )],
         )
         assert isinstance(req.messages[0].content, list)
         assert len(req.messages[0].content) == 2
@@ -103,11 +106,11 @@ class TestStreamChunk:
     def test_to_sse(self) -> None:
         chunk = ChatCompletionChunk(
             model="test",
-            choices=[{
-                "index": 0,
-                "delta": {"content": "Hello"},
-                "finish_reason": None,
-            }],
+            choices=[StreamChoice(
+                index=0,
+                delta=DeltaMessage(content="Hello"),
+                finish_reason=None,
+            )],
         )
         sse = chunk.to_sse()
         assert sse.startswith("data: ")
