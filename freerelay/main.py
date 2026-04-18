@@ -23,16 +23,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from freerelay.config.settings import Settings, get_settings
+from freerelay.config.settings import get_settings
 from freerelay.core.models.openai import (
     ChatCompletionRequest,
     ChatCompletionResponse,
     ModelListResponse,
-    ModelObject,
 )
 from freerelay.core.routing.engine import RoutingEngine
 from freerelay.core.routing.factory import create_routing_engine
 from freerelay.observability.logging import setup_logging
+from freerelay.shared.models.internal import (
+    CheckoutRequest,
+    CheckoutResponse,
+    RegisterRequest,
+    RegisterResponse,
+)
 
 logger = logging.getLogger("freerelay")
 
@@ -85,11 +90,11 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     try:
-        from fastapi.responses import ORJSONResponse  # type: ignore
+        from fastapi.responses import ORJSONResponse
 
-        default_response_class = ORJSONResponse
+        default_response_class: type[Response] = ORJSONResponse
     except Exception:
-        default_response_class = JSONResponse
+        default_response_class = JSONResponse  # type: ignore[assignment]
 
     app = FastAPI(
         title="FreeRelay",
@@ -109,10 +114,14 @@ def create_app() -> FastAPI:
     )
 
     # Optional auth middleware
-    if settings.enable_auth and settings.api_key:
+    if settings.enable_auth or settings.enable_supabase_auth:
         from freerelay.middleware.auth import AuthMiddleware
 
-        app.add_middleware(AuthMiddleware, api_key=settings.api_key)
+        app.add_middleware(
+            AuthMiddleware,
+            api_key=settings.api_key,
+            enable_supabase=settings.enable_supabase_auth,
+        )
 
     # Audit middleware
     from freerelay.middleware.audit import AuditMiddleware
@@ -172,16 +181,7 @@ def create_app() -> FastAPI:
         if not engine:
             return ModelListResponse().model_dump()
 
-        models = [
-            ModelObject(id="freerelay-auto", owned_by="freerelay"),
-        ]
-        for slot in engine.slots:
-            models.append(
-                ModelObject(
-                    id=f"freerelay-{slot.provider.name}",
-                    owned_by="freerelay",
-                )
-            )
+        models = engine.get_models()
         return ModelListResponse(data=models).model_dump()
 
     @app.post("/v1/chat/completions")
@@ -251,13 +251,60 @@ def create_app() -> FastAPI:
             "timestamp": int(time.time()),
         }
 
+    # ── Auth & Billing ───────────────────────────────────────────
+
+    @app.post("/v1/auth/register", response_model=None)
+    async def register(req: RegisterRequest) -> RegisterResponse:
+        from freerelay.shared.security.crypto import generate_api_key, hash_api_key
+        from freerelay.shared.tenancy.supabase import get_supabase_admin_client
+
+        api_key = generate_api_key()
+        key_hash = hash_api_key(api_key)
+
+        try:
+            supabase = get_supabase_admin_client()
+            # 1. Create user (or find)
+            user_res = (
+                supabase.table("users")
+                .upsert({"email": req.email}, on_conflict="email")
+                .execute()
+            )
+            user_id = user_res.data[0]["id"]
+
+            # 2. Store hashed key
+            supabase.table("api_keys").insert(
+                {"user_id": user_id, "key_hash": key_hash, "label": "Default Key"}
+            ).execute()
+
+            return RegisterResponse(api_key=api_key)
+        except Exception as e:
+            logger.exception("Registration failed")
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"Registration failed: {str(e)}"},
+            )  # type: ignore
+
+    @app.post("/v1/billing/checkout", response_model=None)
+    async def billing_checkout(req: CheckoutRequest) -> CheckoutResponse:
+        from freerelay.integrations.stripe import create_checkout_session
+
+        try:
+            session = create_checkout_session(req.email, req.price_id)
+            return CheckoutResponse(url=session.url)
+        except Exception as e:
+            logger.exception("Stripe session creation failed")
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"Stripe failed: {str(e)}"},
+            )  # type: ignore
+
     @app.get("/metrics")
     async def metrics() -> Response:
         from freerelay.observability.metrics import (
             CONTENT_TYPE_LATEST,
             PROMETHEUS_AVAILABLE,
             generate_latest,
-        )
+        )  # type: ignore[attr-defined]
 
         if not PROMETHEUS_AVAILABLE:
             return Response(

@@ -445,6 +445,56 @@ Starts: FreeRelay + Redis + Jaeger + Prometheus + Grafana
 | Prometheus | http://localhost:9091 |
 | Grafana | http://localhost:3000 (admin/freerelay) |
 
+## 🚀 Deployment
+
+### Railway (Recommended)
+
+1. Fork this repository.
+2. Create a new project on Railway and link your fork.
+3. Add the required environment variables (see `.env.example`).
+4. Railway will automatically detect the `railway.json` and `docker/Dockerfile` and deploy the gateway.
+
+### Supabase Setup (Authentication & Usage Tracking)
+
+FreeRelay supports Supabase for managing API keys and tracking usage.
+
+1. Create a new Supabase project.
+2. Run the following SQL in the SQL Editor:
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE api_keys (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id),
+  key_hash TEXT UNIQUE NOT NULL,
+  label TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE usage_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  request_id TEXT NOT NULL,
+  provider TEXT,
+  success BOOLEAN,
+  latency_ms FLOAT,
+  tokens INTEGER,
+  schema_pass BOOLEAN,
+  notes TEXT,
+  timestamp FLOAT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+3. Set `FREERELAY_ENABLE_SUPABASE_AUTH=true` and provide `SUPABASE_URL`, `SUPABASE_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` in your environment.
+
+### Stripe Integration (Payments)
+
+1. Set `STRIPE_SECRET_KEY` in your environment.
+2. Use the `/v1/billing/checkout` endpoint to create a checkout session for your users.
+
 ## CLI
 
 ```bash

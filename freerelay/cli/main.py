@@ -5,9 +5,9 @@ FreeRelay CLI — Simplified one-command experience
 
 from __future__ import annotations
 
+import asyncio
 import os
 import webbrowser
-import asyncio
 from pathlib import Path
 
 import typer
@@ -74,7 +74,7 @@ def _setup_env_interactive() -> None:
         "  [yellow]paid[/yellow] - Use only paid providers (OpenAI, Anthropic)"
     )
     console.print(
-        "  [blue]auto[/blue]  - Use free by default, paid for complex tasks (recommended)\n"
+        "  [blue]auto[/blue]  - Use free by default, paid for complex tasks\n"
     )
 
     mode = Prompt.ask(
@@ -187,7 +187,7 @@ def status() -> None:
         data = resp.json()
     except Exception:
         console.print("[red]✗ FreeRelay not running. Start with: freerelay[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     from rich.table import Table
 
@@ -277,7 +277,9 @@ def open_dashboard() -> None:
 @app.command()
 def ask(
     prompt: str = typer.Argument(..., help="The prompt to send to the LLM"),
-    provider: str = typer.Option(None, "--provider", "-p", help="Force a specific provider"),
+    provider: str = typer.Option(
+        None, "--provider", "-p", help="Force a specific provider"
+    ),
     model: str = typer.Option(None, "--model", "-m", help="Force a specific model"),
 ) -> None:
     """Directly ask the LLM a question."""
@@ -287,7 +289,7 @@ def ask(
         engine = create_routing_engine(settings)
 
         if not engine.slots:
-            console.print("[red]No providers configured! Run 'freerelay setup' first.[/red]")
+            console.print("[red]No providers configured! Run setup first.[/red]")
             return
 
         # Prepare request
@@ -309,9 +311,15 @@ def ask(
             try:
                 response = await engine.route(req)
                 
-                if hasattr(response, 'choices') and response.choices:
+                if hasattr(response, "choices") and response.choices:
                     content = response.choices[0].message.content
-                    console.print(Panel(content, title=f"[bold]{response.model}[/bold]", border_style="green"))
+                    console.print(
+                        Panel(
+                            content,
+                            title=f"[bold]{response.model}[/bold]",
+                            border_style="green",
+                        )
+                    )
                 elif hasattr(response, 'error') and response.error:
                     console.print(f"[red]Error: {response.error.message}[/red]")
                 else:

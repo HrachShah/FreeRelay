@@ -5,6 +5,7 @@ Verify chaos injection behavior per spec.
 """
 
 import asyncio
+
 import pytest
 
 from freerelay.core.resilience.chaos import ChaosInjector

@@ -12,7 +12,7 @@ import hmac
 import json
 import os
 import secrets
-from typing import Any
+from typing import Any, cast
 
 # ─── AES-256-GCM ─────────────────────────────────────────────────────────────
 
@@ -88,7 +88,7 @@ def _aes_gcm_encrypt(plaintext: bytes, key: bytes, nonce: bytes) -> tuple[bytes,
     Returns (tag, ciphertext).
     """
     try:
-        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # type: ignore
 
         aesgcm = AESGCM(key)
         ct = aesgcm.encrypt(nonce, plaintext, None)
@@ -96,11 +96,11 @@ def _aes_gcm_encrypt(plaintext: bytes, key: bytes, nonce: bytes) -> tuple[bytes,
         tag = ct[:16]
         ciphertext = ct[16:]
         return tag, ciphertext
-    except ImportError:
+    except ImportError as e:
         raise RuntimeError(
             "cryptography package required for AES-256-GCM. "
             "Install with: pip install cryptography"
-        )
+        ) from e
 
 
 def _aes_gcm_decrypt(ciphertext: bytes, key: bytes, nonce: bytes, tag: bytes) -> bytes:
@@ -109,15 +109,15 @@ def _aes_gcm_decrypt(ciphertext: bytes, key: bytes, nonce: bytes, tag: bytes) ->
     Returns plaintext.
     """
     try:
-        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # type: ignore
 
         aesgcm = AESGCM(key)
-        return aesgcm.decrypt(nonce, tag + ciphertext, None)
-    except ImportError:
+        return cast(bytes, aesgcm.decrypt(nonce, tag + ciphertext, None))
+    except ImportError as e:
         raise RuntimeError(
             "cryptography package required for AES-256-GCM. "
             "Install with: pip install cryptography"
-        )
+        ) from e
     except Exception as exc:
         raise ValueError("Decryption failed: invalid key or corrupted data") from exc
 
@@ -178,3 +178,13 @@ def generate_tenant_secret() -> str:
 def hash_for_logging(value: str) -> str:
     """One-way SHA-256 hash suitable for log correlation (non-reversible)."""
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
+
+def hash_api_key(api_key: str) -> str:
+    """Hash an API key using SHA-256 for storage/lookup."""
+    return hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+
+
+def generate_api_key(prefix: str = "fr") -> str:
+    """Generate a new secure API key with prefix."""
+    return f"{prefix}_{secrets.token_urlsafe(32)}"
