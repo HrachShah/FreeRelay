@@ -239,11 +239,26 @@ class RoutingEngine:
         available: list[ProviderSlot] = []
         candidate_names: list[str] = []
 
+        # Forced provider check (§14.1)
+        model = context.original_request.model
+        forced_provider = None
+        if model and model.startswith("freerelay-") and model != "freerelay-auto":
+            forced_raw = model.replace("freerelay-", "")
+            if ":" in forced_raw:
+                forced_provider, forced_model = forced_raw.split(":", 1)
+                context.optimized_request.model = forced_model
+            else:
+                forced_provider = forced_raw
+                context.optimized_request.model = ""
+
         # Determine which tier to prioritize
         preferred_tier = self._get_preferred_tier(context.workload_profile)
         has_paid = any(slot.tier == "paid" for slot in self.slots)
 
         for slot in self.slots:
+            if forced_provider and slot.provider.name != forced_provider:
+                continue
+
             if not await slot.circuit.can_execute():
                 continue
             if self.budget.is_budget_exhausted(slot.provider.name):

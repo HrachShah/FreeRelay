@@ -7,12 +7,17 @@ from __future__ import annotations
 
 import os
 import webbrowser
+import asyncio
 from pathlib import Path
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
+
+from freerelay.config.settings import get_settings
+from freerelay.core.models.openai import ChatCompletionRequest, Message
+from freerelay.core.routing.factory import create_routing_engine
 
 app = typer.Typer(
     name="freerelay",
@@ -101,7 +106,7 @@ def _setup_env_interactive() -> None:
     for key, desc in free_keys.items():
         add_key = Prompt.ask(f"Add {desc}?", choices=["y", "n"], default="n")
         if add_key.lower() == "y":
-            api_key = Prompt.obscurored(f"  Enter {key}:")
+            api_key = Prompt.ask(f"  Enter {key}:", password=True)
             if api_key.strip():
                 content.append(f"{key}={api_key.strip()}\n")
 
@@ -109,7 +114,7 @@ def _setup_env_interactive() -> None:
     for key, desc in paid_keys.items():
         add_key = Prompt.ask(f"Add {desc}?", choices=["y", "n"], default="n")
         if add_key.lower() == "y":
-            api_key = Prompt.obscurored(f"  Enter {key}:")
+            api_key = Prompt.ask(f"  Enter {key}:", password=True)
             if api_key.strip():
                 content.append(f"{key}={api_key.strip()}\n")
 
@@ -267,6 +272,58 @@ def benchmark(
 def open_dashboard() -> None:
     """Open the dashboard in browser."""
     webbrowser.open("http://localhost:8000/dashboard")
+
+
+@app.command()
+def ask(
+    prompt: str = typer.Argument(..., help="The prompt to send to the LLM"),
+    provider: str = typer.Option(None, "--provider", "-p", help="Force a specific provider"),
+    model: str = typer.Option(None, "--model", "-m", help="Force a specific model"),
+) -> None:
+    """Directly ask the LLM a question."""
+
+    async def _ask():
+        settings = get_settings()
+        engine = create_routing_engine(settings)
+
+        if not engine.slots:
+            console.print("[red]No providers configured! Run 'freerelay setup' first.[/red]")
+            return
+
+        # Prepare request
+        if provider:
+            req_model = f"freerelay-{provider}"
+            if model:
+                req_model += f":{model}"
+        elif model:
+            req_model = model
+        else:
+            req_model = "auto"
+
+        req = ChatCompletionRequest(
+            messages=[Message(role="user", content=prompt)],
+            model=req_model,
+        )
+
+        with console.status("[bold cyan]Thinking..."):
+            try:
+                response = await engine.route(req)
+                
+                if hasattr(response, 'choices') and response.choices:
+                    content = response.choices[0].message.content
+                    console.print(Panel(content, title=f"[bold]{response.model}[/bold]", border_style="green"))
+                elif hasattr(response, 'error') and response.error:
+                    console.print(f"[red]Error: {response.error.message}[/red]")
+                else:
+                    console.print(f"[red]Unexpected response format: {response}[/red]")
+            except Exception as e:
+                console.print(f"[red]Error: {str(e)}[/red]")
+            finally:
+                # Cleanup shared HTTP client
+                from freerelay.shared.http_client import close_client
+                await close_client()
+
+    asyncio.run(_ask())
 
 
 @app.command()
