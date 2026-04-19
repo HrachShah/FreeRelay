@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { TrendingUp, DollarSign, Zap, ShieldCheck, ArrowDown, ArrowUp } from "lucide-react"
+import { TrendingUp, DollarSign, Zap, ShieldCheck, ArrowDown, ArrowUp, Cpu } from "lucide-react"
 import {
   Area,
   AreaChart,
@@ -81,65 +81,47 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="relative overflow-hidden">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="relative overflow-hidden border-2 border-blue-100 shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Total Spend</CardTitle>
+            <DollarSign className="h-5 w-5 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-900">$10,482.10</div>
+            <div className="mt-1 flex items-center text-sm font-medium text-blue-600">
+               <span>Net spend across all providers</span>
+            </div>
+          </CardContent>
+          <div className="absolute bottom-0 left-0 h-1 w-full bg-blue-600" />
+        </Card>
+        <Card className="relative overflow-hidden border-2 border-green-100 shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Total Savings</CardTitle>
-            <DollarSign className="h-5 w-5 text-green-500" />
+            <Zap className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">$4,128.50</div>
+            <div className="text-3xl font-bold text-green-900">$4,128.50</div>
             <div className="mt-1 flex items-center text-sm font-medium text-green-600">
               <ArrowUp className="mr-1 h-4 w-4" />
-              <span>24.5%</span>
-              <span className="ml-1 text-muted-foreground font-normal text-xs text-nowrap">vs last week</span>
+              <span>24.5% extra ROI</span>
             </div>
           </CardContent>
-          <div className="absolute bottom-0 left-0 h-1 w-full bg-green-500/20" />
+          <div className="absolute bottom-0 left-0 h-1 w-full bg-green-600" />
         </Card>
-        <Card className="relative overflow-hidden">
+        <Card className="relative overflow-hidden border-2 border-purple-100 shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Cost Reduction</CardTitle>
-            <ArrowDown className="h-5 w-5 text-blue-500" />
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Total Tokens</CardTitle>
+            <Cpu className="h-5 w-5 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">38.2%</div>
-            <div className="mt-1 flex items-center text-sm font-medium text-blue-600">
-              <Zap className="mr-1 h-4 w-4" />
-              <span>Optimized</span>
-              <span className="ml-1 text-muted-foreground font-normal text-xs">via FreeRelay</span>
-            </div>
-          </CardContent>
-          <div className="absolute bottom-0 left-0 h-1 w-full bg-blue-500/20" />
-        </Card>
-        <Card className="relative overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Efficiency Index</CardTitle>
-            <ShieldCheck className="h-5 w-5 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">96.4</div>
+            <div className="text-3xl font-bold text-purple-900">124.5M</div>
             <div className="mt-1 flex items-center text-sm font-medium text-purple-600">
               <TrendingUp className="mr-1 h-4 w-4" />
-              <span>+2.1</span>
-              <span className="ml-1 text-muted-foreground font-normal text-xs text-nowrap">improvement</span>
+              <span>+12% volume</span>
             </div>
           </CardContent>
-          <div className="absolute bottom-0 left-0 h-1 w-full bg-purple-500/20" />
-        </Card>
-        <Card className="relative overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Reliability Score</CardTitle>
-            <Zap className="h-5 w-5 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">99.99%</div>
-            <div className="mt-1 flex items-center text-sm font-medium text-amber-600">
-              <span>Stable</span>
-              <span className="ml-1 text-muted-foreground font-normal text-xs text-nowrap">across all fallbacks</span>
-            </div>
-          </CardContent>
-          <div className="absolute bottom-0 left-0 h-1 w-full bg-amber-500/20" />
+          <div className="absolute bottom-0 left-0 h-1 w-full bg-purple-600" />
         </Card>
       </div>
 
