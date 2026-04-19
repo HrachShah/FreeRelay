@@ -176,6 +176,10 @@ def create_app() -> FastAPI:
             "dashboard": "/dashboard/",
         }
 
+    @app.get("/v1/hello")
+    async def hello() -> dict[str, str]:
+        return {"message": "Hello from FreeRelay!"}
+
     @app.get("/v1/models")
     async def list_models() -> dict[str, object]:
         engine = _engine
