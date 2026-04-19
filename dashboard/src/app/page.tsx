@@ -1,19 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { TrendingUp, ArrowDownRight, ArrowUpRight, DollarSign, Zap, ShieldCheck } from "lucide-react"
+import { TrendingUp, DollarSign, Zap, ShieldCheck, ArrowDown, ArrowUp } from "lucide-react"
 import {
   Area,
   AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
-  Label,
-  LabelList,
-  Line,
-  LineChart,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts"
@@ -34,22 +29,27 @@ import {
 } from "@/components/ui/chart"
 
 const chartData = [
-  { month: "January", spend: 186, savings: 80 },
-  { month: "February", spend: 305, savings: 200 },
-  { month: "March", spend: 237, savings: 120 },
-  { month: "April", spend: 73, savings: 190 },
-  { month: "May", spend: 209, savings: 130 },
-  { month: "June", spend: 214, savings: 140 },
+  { day: "Mon", actual: 45, baseline: 65, savings: 20 },
+  { day: "Tue", actual: 52, baseline: 80, savings: 28 },
+  { day: "Wed", actual: 48, baseline: 75, savings: 27 },
+  { day: "Thu", actual: 61, baseline: 95, savings: 34 },
+  { day: "Fri", actual: 55, baseline: 85, savings: 30 },
+  { day: "Sat", actual: 40, baseline: 60, savings: 20 },
+  { day: "Sun", actual: 38, baseline: 55, savings: 17 },
 ]
 
 const chartConfig = {
-  spend: {
-    label: "Actual Spend",
-    color: "var(--chart-1)",
+  actual: {
+    label: "Actual Cost",
+    color: "hsl(var(--chart-1))",
+  },
+  baseline: {
+    label: "Baseline Cost",
+    color: "hsl(var(--chart-2))",
   },
   savings: {
     label: "Savings",
-    color: "var(--chart-2)",
+    color: "hsl(var(--chart-3))",
   },
 } satisfies ChartConfig
 
@@ -64,156 +64,230 @@ export default function DashboardPage() {
   }, [])
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Savings Dashboard</h1>
-          <p className="text-muted-foreground">
-            Real-time insights into your LLM spend and optimizations.
+          <h1 className="text-4xl font-extrabold tracking-tight">Savings Dashboard</h1>
+          <p className="text-lg text-muted-foreground">
+            Transparency into your LLM optimizations and ROI.
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border bg-card p-2 px-3 text-sm font-medium shadow-sm">
-          <span className="flex h-2 w-2 rounded-full bg-green-500" />
-          Backend: {backendStatus}
+        <div className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 text-sm font-semibold shadow-sm">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+          </span>
+          Gateway: {backendStatus}
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Savings</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Total Savings</CardTitle>
+            <DollarSign className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$1,284.42</div>
-            <p className="text-xs text-muted-foreground">
-              +20.1% from last month
-            </p>
+            <div className="text-3xl font-bold">$4,128.50</div>
+            <div className="mt-1 flex items-center text-sm font-medium text-green-600">
+              <ArrowUp className="mr-1 h-4 w-4" />
+              <span>24.5%</span>
+              <span className="ml-1 text-muted-foreground font-normal text-xs text-nowrap">vs last week</span>
+            </div>
           </CardContent>
+          <div className="absolute bottom-0 left-0 h-1 w-full bg-green-500/20" />
         </Card>
-        <Card>
+        <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Efficiency Score</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Cost Reduction</CardTitle>
+            <ArrowDown className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">94%</div>
-            <p className="text-xs text-muted-foreground">
-              +4% from last month
-            </p>
+            <div className="text-3xl font-bold">38.2%</div>
+            <div className="mt-1 flex items-center text-sm font-medium text-blue-600">
+              <Zap className="mr-1 h-4 w-4" />
+              <span>Optimized</span>
+              <span className="ml-1 text-muted-foreground font-normal text-xs">via FreeRelay</span>
+            </div>
           </CardContent>
+          <div className="absolute bottom-0 left-0 h-1 w-full bg-blue-500/20" />
         </Card>
-        <Card>
+        <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Requests Handled</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Efficiency Index</CardTitle>
+            <ShieldCheck className="h-5 w-5 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45,231</div>
-            <p className="text-xs text-muted-foreground">
-              +12% from last month
-            </p>
+            <div className="text-3xl font-bold">96.4</div>
+            <div className="mt-1 flex items-center text-sm font-medium text-purple-600">
+              <TrendingUp className="mr-1 h-4 w-4" />
+              <span>+2.1</span>
+              <span className="ml-1 text-muted-foreground font-normal text-xs text-nowrap">improvement</span>
+            </div>
           </CardContent>
+          <div className="absolute bottom-0 left-0 h-1 w-full bg-purple-500/20" />
         </Card>
-        <Card>
+        <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reliability</CardTitle>
-            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Reliability Score</CardTitle>
+            <Zap className="h-5 w-5 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">99.98%</div>
-            <p className="text-xs text-muted-foreground">
-              +0.02% from last month
-            </p>
+            <div className="text-3xl font-bold">99.99%</div>
+            <div className="mt-1 flex items-center text-sm font-medium text-amber-600">
+              <span>Stable</span>
+              <span className="ml-1 text-muted-foreground font-normal text-xs text-nowrap">across all fallbacks</span>
+            </div>
           </CardContent>
+          <div className="absolute bottom-0 left-0 h-1 w-full bg-amber-500/20" />
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle>Spend vs Savings</CardTitle>
+            <CardTitle>Cost Breakdown</CardTitle>
             <CardDescription>
-              Monthly breakdown of your direct costs vs. FreeRelay optimizations.
+              Actual spend vs what you would have paid without FreeRelay.
             </CardDescription>
           </CardHeader>
-          <CardContent className="pb-4">
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <BarChart data={chartData}>
-                <CartesianGrid vertical={false} />
+          <CardContent className="px-2 sm:px-6">
+            <ChartContainer config={chartConfig} className="h-[350px] w-full">
+              <BarChart data={chartData} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.5} />
                 <XAxis
-                  dataKey="month"
+                  dataKey="day"
                   tickLine={false}
                   tickMargin={10}
                   axisLine={false}
-                  tickFormatter={(value) => value.slice(0, 3)}
                 />
                 <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="dashed" />}
+                  cursor={{ fill: 'transparent' }}
+                  content={<ChartTooltipContent indicator="line" />}
                 />
-                <Bar dataKey="spend" fill="var(--color-spend)" radius={4} />
-                <Bar dataKey="savings" fill="var(--color-savings)" radius={4} />
+                <Bar dataKey="actual" fill="var(--color-actual)" radius={[4, 4, 0, 0]} barSize={30} />
+                <Bar dataKey="baseline" fill="var(--color-baseline)" radius={[4, 4, 0, 0]} barSize={30} opacity={0.3} />
               </BarChart>
             </ChartContainer>
           </CardContent>
           <CardFooter className="flex-col items-start gap-2 text-sm">
-            <div className="flex gap-2 font-medium leading-none">
-              Savings up by 5.2% this month <TrendingUp className="h-4 w-4" />
+            <div className="flex items-center gap-2 font-bold text-lg">
+              Saving $172.40 daily average
             </div>
-            <div className="leading-none text-muted-foreground">
-              Showing total spend and savings for the last 6 months
+            <div className="leading-none text-muted-foreground font-medium">
+              FreeRelay is currently reducing your LLM API costs by ~38% compared to direct calls.
             </div>
           </CardFooter>
         </Card>
+
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Optimization Trends</CardTitle>
+            <CardTitle>Savings over Time</CardTitle>
             <CardDescription>
-              Success rate of automatic model routing.
+              Cumulative value generated by model routing.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <AreaChart data={chartData}>
-                <CartesianGrid vertical={false} />
+          <CardContent className="px-2">
+            <ChartContainer config={chartConfig} className="h-[350px] w-full">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-savings)" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="var(--color-savings)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
                 <XAxis
-                  dataKey="month"
+                  dataKey="day"
                   tickLine={false}
                   tickMargin={10}
                   axisLine={false}
-                  tickFormatter={(value) => value.slice(0, 3)}
                 />
                 <ChartTooltip
                   cursor={false}
                   content={<ChartTooltipContent />}
                 />
-                <defs>
-                  <linearGradient id="fillSavings" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="5%"
-                      stopColor="var(--color-savings)"
-                      stopOpacity={0.8}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="var(--color-savings)"
-                      stopOpacity={0.1}
-                    />
-                  </linearGradient>
-                </defs>
                 <Area
+                  type="monotone"
                   dataKey="savings"
-                  type="natural"
-                  fill="url(#fillSavings)"
-                  fillOpacity={0.4}
                   stroke="var(--color-savings)"
-                  stackId="a"
+                  fillOpacity={1}
+                  fill="url(#colorSavings)"
+                  strokeWidth={3}
                 />
               </AreaChart>
             </ChartContainer>
           </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+             <div className="flex w-full items-center justify-between border-t pt-4">
+                <div className="text-sm font-medium text-muted-foreground">Weekly Target</div>
+                <div className="text-sm font-bold text-green-600">84% achieved</div>
+             </div>
+             <div className="h-2 w-full rounded-full bg-secondary">
+                <div className="h-full w-[84%] rounded-full bg-green-500" />
+             </div>
+          </CardFooter>
         </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+         <Card>
+            <CardHeader>
+               <CardTitle className="text-lg">Top Optimized Models</CardTitle>
+            </CardHeader>
+            <CardContent>
+               <div className="space-y-4">
+                  {[
+                     { name: "GPT-4o", optimized: "45%", savings: "$840" },
+                     { name: "Claude 3.5 Sonnet", optimized: "32%", savings: "$520" },
+                     { name: "Llama 3 70B", optimized: "18%", savings: "$210" },
+                  ].map((model) => (
+                     <div key={model.name} className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                           <span className="font-bold">{model.name}</span>
+                           <span className="text-xs text-muted-foreground">{model.optimized} of traffic</span>
+                        </div>
+                        <div className="font-mono text-green-600 font-bold">{model.savings}</div>
+                     </div>
+                  ))}
+               </div>
+            </CardContent>
+         </Card>
+         <Card>
+            <CardHeader>
+               <CardTitle className="text-lg">Reliability Fallbacks</CardTitle>
+            </CardHeader>
+            <CardContent>
+               <div className="space-y-4">
+                  {[
+                     { name: "Rate Limit (429)", count: 24, resolution: "Retry Success" },
+                     { name: "Timeout", count: 12, resolution: "Failover to Llama 3" },
+                     { name: "Model Error (500)", count: 5, resolution: "Failover to GPT-4o-mini" },
+                  ].map((error) => (
+                     <div key={error.name} className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                           <span className="font-bold">{error.name}</span>
+                           <span className="text-xs text-muted-foreground">{error.resolution}</span>
+                        </div>
+                        <div className="bg-secondary px-2 py-1 rounded text-xs font-bold">{error.count}x</div>
+                     </div>
+                  ))}
+               </div>
+            </CardContent>
+         </Card>
+         <Card className="bg-blue-600 text-white border-none shadow-xl">
+            <CardHeader>
+               <CardTitle className="text-lg text-white">Projected Monthly Savings</CardTitle>
+               <CardDescription className="text-blue-100">Based on current usage patterns.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center py-6">
+               <div className="text-5xl font-black">$18,450.00</div>
+               <p className="mt-2 text-blue-100 text-sm font-medium italic">"The most transparent ROI in AI."</p>
+            </CardContent>
+            <CardFooter className="bg-blue-700/50 justify-center">
+               <button className="text-sm font-bold uppercase tracking-widest hover:underline">View Detailed ROI Report</button>
+            </CardFooter>
+         </Card>
       </div>
     </div>
   )
