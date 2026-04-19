@@ -57,7 +57,8 @@ export default function DashboardPage() {
   const [backendStatus, setBackendStatus] = React.useState<string>("Checking...")
 
   React.useEffect(() => {
-    fetch("http://localhost:8000/v1/hello")
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+    fetch(`${apiUrl}/v1/hello`)
       .then((res) => res.json())
       .then((data) => setBackendStatus(data.message || "Connected"))
       .catch((err) => setBackendStatus("Disconnected (Backend not running)"))
