@@ -459,41 +459,17 @@ Starts: FreeRelay + Redis + Jaeger + Prometheus + Grafana
 FreeRelay supports Supabase for managing API keys and tracking usage.
 
 1. Create a new Supabase project.
-2. Run the following SQL in the SQL Editor:
-```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  email TEXT UNIQUE NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE api_keys (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES users(id),
-  key_hash TEXT UNIQUE NOT NULL,
-  label TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE usage_logs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  request_id TEXT NOT NULL,
-  provider TEXT,
-  success BOOLEAN,
-  latency_ms FLOAT,
-  tokens INTEGER,
-  schema_pass BOOLEAN,
-  notes TEXT,
-  timestamp FLOAT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-3. Set `FREERELAY_ENABLE_SUPABASE_AUTH=true` and provide `SUPABASE_URL`, `SUPABASE_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` in your environment.
+2. Run the SQL in `supabase_schema.sql` in the SQL Editor to create the necessary tables and indices.
+3. Set `FREERELAY_ENABLE_SUPABASE_AUTH=true` and provide `SUPABASE_URL`, `SUPABASE_KEY`, and `FREERELAY_SUPABASE_SERVICE_ROLE_KEY` (for admin tasks like registration) in your environment.
 
 ### Stripe Integration (Payments)
 
-1. Set `STRIPE_SECRET_KEY` in your environment.
-2. Use the `/v1/billing/checkout` endpoint to create a checkout session for your users.
+FreeRelay includes basic Stripe integration for user upgrades.
+
+1. Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in your environment.
+2. Configure `STRIPE_SUCCESS_URL` and `STRIPE_CANCEL_URL`.
+3. Use the `/v1/billing/checkout` endpoint to create a checkout session.
+4. Set up a Stripe webhook pointing to `https://your-domain.com/v1/billing/webhook` listening for `checkout.session.completed` events.
 
 ## CLI
 

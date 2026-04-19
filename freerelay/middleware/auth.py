@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import functools
 import logging
+from typing import Any
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -20,20 +21,35 @@ from freerelay.shared.security.crypto import hash_api_key
 logger = logging.getLogger("freerelay.auth")
 
 @functools.lru_cache(maxsize=1000)
-def _verify_token_supabase(token_hash: str) -> bool:
+def _verify_token_supabase(token_hash: str) -> dict[str, str] | None:
     """
     Verify a token hash against Supabase api_keys table.
     Cached to avoid repeated DB calls.
+    Returns a dict with user_id and tier if valid, else None.
     """
     from freerelay.shared.tenancy.supabase import get_supabase_client
     try:
         supabase = get_supabase_client()
-        query = supabase.table("api_keys").select("id").eq("key_hash", token_hash)
-        result = query.execute()
-        return len(result.data) > 0
+        # Join with users table to get the tier
+        result = (
+            supabase.table("api_keys")
+            .select("user_id, users(tier)")
+            .eq("key_hash", token_hash)
+            .eq("is_active", True)
+            .execute()
+        )
+        if result.data:
+            data: Any = result.data[0]
+            user_id = str(data["user_id"])
+            users_data: Any = data.get("users")
+            tier = "free"
+            if isinstance(users_data, dict):
+                tier = str(users_data.get("tier", "free"))
+            return {"user_id": user_id, "tier": tier}
+        return None
     except Exception as e:
         logger.error(f"Supabase auth error: {e}")
-        return False
+        return None
 
 class AuthMiddleware(BaseHTTPMiddleware):
     """
@@ -51,11 +67,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        # Skip auth for health/dashboard/metrics/registration
+        # Skip auth for health/dashboard/metrics/registration/checkout/webhooks
         path = request.url.path
         skip_paths = (
             "/health", "/ready", "/dashboard", "/metrics", "/docs", 
-            "/openapi.json", "/v1/auth/register", "/v1/billing/checkout"
+            "/openapi.json", "/v1/auth/register", "/v1/billing/checkout",
+            "/v1/billing/webhook"
         )
         if any(path.startswith(p) for p in skip_paths) or path == "/":
             return await call_next(request)
@@ -67,12 +84,17 @@ class AuthMiddleware(BaseHTTPMiddleware):
             
             # 1. Static key check
             if self.api_key and token == self.api_key:
+                request.state.user_id = "admin"
+                request.state.tier = "gold"
                 return await call_next(request)
             
             # 2. Supabase check
             if self.enable_supabase:
                 token_hash = hash_api_key(token)
-                if _verify_token_supabase(token_hash):
+                user_info = _verify_token_supabase(token_hash)
+                if user_info:
+                    request.state.user_id = user_info["user_id"]
+                    request.state.tier = user_info["tier"]
                     return await call_next(request)
 
         return JSONResponse(

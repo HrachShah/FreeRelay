@@ -16,14 +16,15 @@ class OutcomeRecord:
     """Post-hoc information emitted after request resolution."""
 
     request_id: str
-    selected_provider: str
-    alternatives: list[str]
-    success: bool
-    schema_pass: bool | None
-    latency_ms: float
-    cost_tokens: int
-    hallucination_signal: float
-    downstream_success: str | None
+    user_id: str | None = None
+    selected_provider: str = ""
+    alternatives: list[str] = field(default_factory=list)
+    success: bool = False
+    schema_pass: bool | None = None
+    latency_ms: float = 0.0
+    cost_tokens: int = 0
+    hallucination_signal: float = 0.0
+    downstream_success: str | None = None
     timestamp: float = field(default_factory=time.time)
     notes: str | None = None
 

@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from freerelay.config.settings import Settings
 from freerelay.core.execution.planner import ExecutionPlanner
@@ -82,6 +82,7 @@ class ProviderSlot:
 @dataclass(slots=True)
 class RequestContext:
     request_id: str
+    user_id: str | None
     original_request: ChatCompletionRequest
     optimized_request: ChatCompletionRequest
     workload_profile: WorkloadProfile
@@ -96,7 +97,7 @@ class RequestContext:
     def policy_context(self) -> dict[str, Any]:
         return {
             "workload": self.workload_profile.to_dict(),
-            "tenant": {"tier": self.tenant_tier},
+            "tenant": {"id": self.user_id, "tier": self.tenant_tier},
             "schema": {"success_ratio": self.schema_success_ratio},
             "compression": {
                 "tokens_saved": self.compression.tokens_saved,
@@ -200,11 +201,17 @@ class RoutingEngine:
             self.budget.set_daily_limit(provider.name, daily_limit)
         logger.info(f"Registered provider: {provider.name} (tier: {tier})")
 
-    def _prepare_context(self, request: ChatCompletionRequest) -> RequestContext:
+    def _prepare_context(
+        self,
+        request: ChatCompletionRequest,
+        user_id: str | None = None,
+        tier: str = "free",
+    ) -> RequestContext:
         profile = self.profiler.profile(request)
         bundle = self.context_optimizer.optimize(request)
         return RequestContext(
             request_id=f"req_{uuid.uuid4().hex[:12]}",
+            user_id=user_id,
             original_request=request,
             optimized_request=bundle.optimized_request,
             workload_profile=profile,
@@ -213,7 +220,7 @@ class RoutingEngine:
             salience_order=bundle.salience_order,
             total_tokens=bundle.total_tokens,
             schema_success_ratio=0.95,
-            tenant_tier="bronze",
+            tenant_tier=tier,
         )
 
     def _build_policy_context(self, context: RequestContext) -> dict[str, Any]:
@@ -255,6 +262,13 @@ class RoutingEngine:
 
         # Determine which tier to prioritize
         preferred_tier = self._get_preferred_tier(context.workload_profile)
+        
+        # User tier limits: free users can't use paid providers unless 
+        # specifically allowed
+        if context.tenant_tier == "free" and preferred_tier == "paid":
+             # Force downgrade to free for free tier users
+             preferred_tier = "free"
+             
         has_paid = any(slot.tier == "paid" for slot in self.slots)
 
         for slot in self.slots:
@@ -318,8 +332,10 @@ class RoutingEngine:
     async def route(
         self,
         request: ChatCompletionRequest,
+        user_id: str | None = None,
+        tier: str = "free",
     ) -> ChatCompletionResponse:
-        context = self._prepare_context(request)
+        context = self._prepare_context(request, user_id=user_id, tier=tier)
         ranked, directive = await self._ranked_slots(context)
 
         if not ranked:
@@ -421,8 +437,10 @@ class RoutingEngine:
     async def route_stream(
         self,
         request: ChatCompletionRequest,
+        user_id: str | None = None,
+        tier: str = "free",
     ) -> Any:
-        context = self._prepare_context(request)
+        context = self._prepare_context(request, user_id=user_id, tier=tier)
         ranked, _ = await self._ranked_slots(context)
 
         if not ranked:
@@ -436,11 +454,46 @@ class RoutingEngine:
 
             try:
                 await self.chaos.maybe_inject(provider.name)
+                
+                full_content = []
+                start_time = time.time()
+                
                 async for line in provider.stream(
                     context.optimized_request, slot.api_key
                 ):
                     yield line
+                    # Simple token tracking from stream
+                    if line.startswith("data: "):
+                        data_str = line[6:].strip()
+                        if data_str and data_str != "[DONE]":
+                            try:
+                                import json
+                                chunk = json.loads(data_str)
+                                if "choices" in chunk and chunk["choices"]:
+                                    delta = chunk["choices"][0].get("delta", {})
+                                    if "content" in delta and delta["content"]:
+                                        full_content.append(delta["content"])
+                            except Exception:
+                                pass
 
+                elapsed_ms = (time.time() - start_time) * 1000
+                # Estimate tokens if not provided in stream (most aren't)
+                content_str = "".join(full_content)
+                completion_tokens = len(content_str) // 4
+                prompt_tokens = context.total_tokens
+                total_tokens = prompt_tokens + completion_tokens
+
+                self.budget.record_tokens(provider.name, total_tokens)
+                self._log_outcome(
+                    context=context,
+                    provider_name=provider.name,
+                    success=True,
+                    schema_pass=True, # Streams are usually successful if they finish
+                    latency_ms=elapsed_ms,
+                    cost_tokens=total_tokens,
+                    alternatives=[],
+                    notes="streamed",
+                )
                 return
 
             except RateLimitError:
@@ -529,6 +582,7 @@ class RoutingEngine:
     ) -> None:
         record = OutcomeRecord(
             request_id=context.request_id,
+            user_id=context.user_id,
             selected_provider=provider_name,
             alternatives=alternatives,
             success=success,

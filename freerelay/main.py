@@ -17,6 +17,7 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -94,7 +95,7 @@ def create_app() -> FastAPI:
 
         default_response_class: type[Response] = ORJSONResponse
     except Exception:
-        default_response_class = JSONResponse  # type: ignore[assignment]
+        default_response_class = JSONResponse
 
     app = FastAPI(
         title="FreeRelay",
@@ -220,9 +221,12 @@ def create_app() -> FastAPI:
             },
         )
 
+        user_id = getattr(request.state, "user_id", None)
+        tier = getattr(request.state, "tier", "free")
+
         if req.is_streaming():
             return StreamingResponse(
-                engine.route_stream(req),
+                engine.route_stream(req, user_id=user_id, tier=tier),
                 media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
@@ -231,7 +235,7 @@ def create_app() -> FastAPI:
                 },
             )
 
-        response = await engine.route(req)
+        response = await engine.route(req, user_id=user_id, tier=tier)
 
         if "error" in response.model_dump():
             return JSONResponse(
@@ -269,7 +273,17 @@ def create_app() -> FastAPI:
                 .upsert({"email": req.email}, on_conflict="email")
                 .execute()
             )
-            user_id = user_res.data[0]["id"]
+            if not user_res.data:
+                # If upsert didn't return data, try to fetch the user
+                user_res = (
+                    supabase.table("users")
+                    .select("id")
+                    .eq("email", req.email)
+                    .execute()
+                )
+            
+            user_data: Any = user_res.data[0]
+            user_id = str(user_data["id"])
 
             # 2. Store hashed key
             supabase.table("api_keys").insert(
@@ -298,13 +312,44 @@ def create_app() -> FastAPI:
                 content={"error": f"Stripe failed: {str(e)}"},
             )  # type: ignore
 
+    @app.post("/v1/billing/webhook")
+    async def stripe_webhook(request: Request) -> Response:
+        import stripe
+
+        from freerelay.shared.tenancy.supabase import get_supabase_admin_client
+        
+        payload = await request.body()
+        sig_header = request.headers.get("Stripe-Signature")
+        settings = get_settings()
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, settings.stripe_webhook_secret
+            )  # type: ignore[no-untyped-call]
+        except Exception as e:
+            return Response(content=str(e), status_code=400)
+
+        if event["type"] == "checkout.session.completed":
+            session = event["data"]["object"]
+            email = session.get("customer_email")
+            # Upgrade user to bronze/silver based on price_id or metadata
+            # For MVP, we just set to 'bronze'
+            if email:
+                supabase = get_supabase_admin_client()
+                supabase.table("users").update({"tier": "bronze"}).eq(
+                    "email", email
+                ).execute()
+                logger.info(f"User {email} upgraded to bronze")
+
+        return Response(status_code=200)
+
     @app.get("/metrics")
     async def metrics() -> Response:
         from freerelay.observability.metrics import (
             CONTENT_TYPE_LATEST,
             PROMETHEUS_AVAILABLE,
             generate_latest,
-        )  # type: ignore[attr-defined]
+        )
 
         if not PROMETHEUS_AVAILABLE:
             return Response(
@@ -566,7 +611,7 @@ if __name__ == "__main__":
 
     # Use uvloop on Linux for better async performance
     try:
-        import uvloop  # type: ignore[import-untyped]
+        import uvloop
 
         uvloop.install()
     except ImportError:

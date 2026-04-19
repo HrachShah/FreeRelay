@@ -137,11 +137,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if self._request_count % _CLEANUP_INTERVAL == 0:
             self._cleanup_stale_buckets()
 
-        client_ip = request.client.host if request.client else "unknown"
-        bucket = self._get_bucket(client_ip)
+        # Identify by user_id if available (from AuthMiddleware), otherwise IP
+        user_id = getattr(request.state, "user_id", None)
+        client_id = user_id or (request.client.host if request.client else "unknown")
+        bucket = self._get_bucket(client_id)
 
         if not bucket.consume():
-            logger.warning("Rate limit exceeded for %s", client_ip)
+            logger.warning("Rate limit exceeded for %s", client_id)
             return JSONResponse(
                 status_code=429,
                 content={
