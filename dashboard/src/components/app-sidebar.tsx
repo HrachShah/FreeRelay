@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { usePathname } from "next/navigation"
 import {
   BarChart3,
   LayoutDashboard,
@@ -28,7 +29,6 @@ const data = {
       title: "Dashboard",
       url: "/",
       icon: LayoutDashboard,
-      isActive: true,
     },
     {
       title: "Usage & Savings",
@@ -37,7 +37,7 @@ const data = {
     },
     {
       title: "API Keys",
-      url: "#",
+      url: "/api-keys",
       icon: ShieldCheck,
     },
     {
@@ -54,12 +54,14 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname()
+
   return (
     <Sidebar {...props}>
       <SidebarHeader className="flex h-14 items-center border-b px-6">
         <div className="flex items-center gap-2 font-semibold">
           <Zap className="h-6 w-6 text-blue-600" />
-          <span className="text-xl">FreeRelay</span>
+          <span className="text-xl tracking-tight">FreeRelay</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -69,10 +71,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {data.navMain.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={item.isActive}>
+                  <SidebarMenuButton asChild isActive={pathname === item.url}>
                     <a href={item.url}>
                       <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                      <span className="font-medium">{item.title}</span>
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
