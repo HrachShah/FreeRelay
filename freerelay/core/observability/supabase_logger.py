@@ -19,10 +19,9 @@ class SupabaseUsageLogger:
 
         try:
             supabase = get_supabase_client()
-            # In a real app, we'd want to link request_id to a user_id.
-            # For the MVP, we just log the raw outcome record.
             supabase.table("usage_logs").insert({
                 "request_id": record.request_id,
+                "user_id": record.user_id,
                 "provider": record.selected_provider,
                 "success": record.success,
                 "latency_ms": record.latency_ms,

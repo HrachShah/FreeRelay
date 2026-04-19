@@ -6,6 +6,19 @@ Metrics registry with all counters, histograms, and gauges from the spec.
 
 from __future__ import annotations
 
+__all__ = [
+    "PROMETHEUS_AVAILABLE",
+    "CONTENT_TYPE_LATEST",
+    "generate_latest",
+    "requests_total",
+    "request_duration",
+    "tokens_used",
+    "cache_hits",
+    "circuit_state",
+    "budget_remaining",
+    "compression_ratio",
+]
+
 try:
     from prometheus_client import (
         CONTENT_TYPE_LATEST,
