@@ -21,13 +21,13 @@
 
 ---
 
-## The Problem
+README: updated# The Problem
 
 - **Free AI tiers are fragmented.** Groq, Google AI Studio, OpenRouter, Together, Mistral — all have free tiers with different formats, limits, and reliability.
 - **Rate limits break your app.** You hit a 429 and your entire pipeline stops.
 - **No smart routing.** Simple tasks waste premium credits, complex tasks fail on free tiers.
 
-## The Solution
+README: updated# The Solution
 
 FreeRelay is a **self-hosted AI gateway** that automatically chooses the best provider for each request.
 
@@ -56,23 +56,23 @@ FreeRelay is a **self-hosted AI gateway** that automatically chooses the best pr
    └─────────────┘             └─────────────┘              └─────────────┘
 ```
 
-## ⚡ Quick Start
+README: updated# ⚡ Quick Start
 
 ```bash
-# Install & run - works out of the box!
+README: updated& run - works out of the box!
 pip install -e .; freerelay
 ```
 
 That's it! FreeRelay runs in **auto mode** at `http://localhost:8000`.
 
-### Guided Setup
+README: updated## Guided Setup
 
 ```bash
-# Interactive setup to add API keys
+README: updated add API keys
 freerelay setup
 ```
 
-### Test it
+README: updated## Test it
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
@@ -80,7 +80,7 @@ curl http://localhost:8000/v1/chat/completions \
   -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
-### Use with OpenAI SDK
+README: updated## Use with OpenAI SDK
 
 ```python
 from openai import OpenAI
@@ -94,7 +94,7 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-## Modes
+README: updated# Modes
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
@@ -104,9 +104,9 @@ print(response.choices[0].message.content)
 
 **Auto mode** automatically routes complex tasks (deep analysis, coding, large context) to paid providers while keeping simple tasks on free tier.
 
-## Supported Providers
+README: updated# Supported Providers
 
-### Free Tier
+README: updated## Free Tier
 
 | Provider | Models | RPM | Best For |
 |----------|--------|-----|----------|
@@ -117,16 +117,16 @@ print(response.choices[0].message.content)
 | **Mistral** | mistral-small | — | 🇫🇷 Multilingual |
 | **NVIDIA** | llama-3.1, mixtral | 40 | 🎮 GPU optimized |
 
-### Paid Tier
+README: updated## Paid Tier
 
 | Provider | Models | Best For |
 |----------|--------|----------|
 | **OpenAI** | gpt-4o, gpt-4o-mini | 🌟 Best overall |
 | **Anthropic** | claude-3.5-sonnet | 📝 Long context |
 
-## 🔑 How to Get API Keys (Step by Step)
+README: updated# 🔑 How to Get API Keys (Step by Step)
 
-### Groq (Free)
+README: updated## Groq (Free)
 
 1. Go to **https://console.groq.com/keys**
 2. Click **Sign Up** (or **Log In** if you have an account)
@@ -135,7 +135,7 @@ print(response.choices[0].message.content)
 5. Copy the key (starts with `gsk_...`)
 6. Add to `.env`: `GROQ_API_KEY=gsk_your_key_here`
 
-### Google AI Studio (Free)
+README: updated## Google AI Studio (Free)
 
 1. Go to **https://aistudio.google.com/apikey**
 2. Sign in with your Google account
@@ -144,7 +144,7 @@ print(response.choices[0].message.content)
 5. Copy the key
 6. Add to `.env`: `GOOGLE_AI_KEY=your_key_here`
 
-### OpenRouter (Free)
+README: updated## OpenRouter (Free)
 
 1. Go to **https://openrouter.ai/keys**
 2. Click **Sign Up** (or **Log In**)
@@ -153,7 +153,7 @@ print(response.choices[0].message.content)
 5. Copy the key (starts with `sk-or-...`)
 6. Add to `.env`: `OPENROUTER_API_KEY=sk-or-your_key_here`
 
-### Together AI (Free)
+README: updated## Together AI (Free)
 
 1. Go to **https://api.together.xyz**
 2. Click **Sign Up** or **Log In**
@@ -162,7 +162,7 @@ print(response.choices[0].message.content)
 5. Copy the key
 6. Add to `.env`: `TOGETHER_API_KEY=your_key_here`
 
-### Mistral AI (Free)
+README: updated## Mistral AI (Free)
 
 1. Go to **https://console.mistral.ai/api-keys/**
 2. Sign up or log in
@@ -171,7 +171,7 @@ print(response.choices[0].message.content)
 5. Copy the key
 6. Add to `.env`: `MISTRAL_API_KEY=your_key_here`
 
-### NVIDIA Build (Free)
+README: updated## NVIDIA Build (Free)
 
 1. Go to **https://build.nvidia.com/explore/recommended**
 2. Click **Sign Up** (or **Log In**)
@@ -180,7 +180,7 @@ print(response.choices[0].message.content)
 5. Copy the key (starts with `nvapi-...`)
 6. Add to `.env`: `NVIDIA_API_KEY=nvapi-your_key_here`
 
-### OpenAI (Paid)
+README: updated## OpenAI (Paid)
 
 1. Go to **https://platform.openai.com/api-keys**
 2. Sign up or log in
@@ -189,7 +189,7 @@ print(response.choices[0].message.content)
 5. Copy the key (starts with `sk-...`)
 6. Add to `.env`: `OPENAI_API_KEY=sk-your_key_here`
 
-### Anthropic (Paid)
+README: updated## Anthropic (Paid)
 
 1. Go to **https://console.anthropic.com/settings/keys**
 2. Sign up or log in
@@ -198,15 +198,15 @@ print(response.choices[0].message.content)
 5. Copy the key (starts with `sk-ant-...`)
 6. Add to `.env`: `ANTHROPIC_API_KEY=sk-ant-your_key_here`
 
-## Configuration
+README: updated# Configuration
 
 After getting your API keys, edit `.env`:
 
 ```bash
-# Mode: free, paid, or auto
+README: updated: free, paid, or auto
 FREERELAY_MODE=auto
 
-# Free providers
+README: updated
 GROQ_API_KEY=gsk_your_key_here
 GOOGLE_AI_KEY=your_key_here
 OPENROUTER_API_KEY=sk-or_your_key_here
@@ -214,31 +214,31 @@ TOGETHER_API_KEY=your_key_here
 MISTRAL_API_KEY=your_key_here
 NVIDIA_API_KEY=nvapi_your_key_here
 
-# Paid providers (optional)
+README: updated(optional)
 OPENAI_API_KEY=sk_your_key_here
 ANTHROPIC_API_KEY=sk-ant_your_key_here
 ```
 
-## Features That Set FreeRelay Apart
+README: updated# Features That Set FreeRelay Apart
 
 FreeRelay implements the **v3 MAX inference specification** documented in [docs/free_relay_v3_max_spec.md](docs/free_relay_v3_max_spec.md) (originally authored as FreeRelay_v3_MAX.zip). The spec describes an inference operating system that profiles every request, routes on expected outcomes, orchestrates declarative DAGs, validates/repairs, and keeps a policy-grade control plane buzzing behind the scenes.
 
-### 🧠 Workload Profiling & Context Engineering
+README: updated## 🧠 Workload Profiling & Context Engineering
 Every request is profiled on ten axes (task family, depth, precision, latency class, context topology, tools, determinism, safety, output contract, and economics) in under 5ms without any LLM calls. A context optimizer salience-ranks history, packs the highest-value lanes (instructions, memory, facts, tools, scratch), and rewrites prompts per provider signature before execution.
 
-### ⚖️ Outcome-Aware Routing & Policy Engine
+README: updated## ⚖️ Outcome-Aware Routing & Policy Engine
 The router scores every provider-model on an expected utility formula that blends learned success probabilities, judge-derived quality scores, schema-compliance estimates, latency/cost/safety utilities, tenant policy weights, circuit state, budget health, and a UCB exploration bonus. Policy DSL rules can prefer/require/exclude providers, cap temperature, enable hedging, or fuse validators before the highest-utility decision is made.
 
-### 🧵 Multi-Step Execution DAG & Validation
+README: updated## 🧵 Multi-Step Execution DAG & Validation
 Execution graphs replace one-shot requests. Workflows chain classifiers, generators, validators, judges, repair FSMs, tool nodes, speculative decomposers, and hedging strategies with conditional transitions (verification_failed, tool_error, etc.). Validation happens in tiers—structural (JSON/AST/schema), semantic (heuristics, spaCy), and asynchronous judges—and failures trigger repair attempts (stronger prompts, deterministic decoding, provider escalation) before the response leaves the system.
 
-### 🛡️ Correctness, Resilience & Streaming
+README: updated## 🛡️ Correctness, Resilience & Streaming
 Circuit breakers (Lua-backed CLOSED/HALF_OPEN/OPEN), EWMA budget forecasting, AIMD concurrency, brownout, and chaos-mode resilience protect downstream clients. Streaming uses backpressured SSE proxies with bounded queues and deterministic resume for long-running jobs. Semantic caching (datasketch MinHash + LSH) dedupes prompts, while observability (Prometheus + OpenTelemetry + structured logs) surfaces schema pass rates, retry taxonomies, hallucination signals, and provider drift.
 
-### 🛰️ Control Plane, Economics & Leaderboard
+README: updated## 🛰️ Control Plane, Economics & Leaderboard
 The control plane owns tenant policy objects, capability registry, benchmark catalog, experiments (shadowing, A/B routing, replay simulators, what-if scoring), and the economic engine. Policies cover allowed providers/geographies, cost/latency ceilings, tool restrictions, and fallback chains. Economics optimize cost-per-success, reserve premium budgets, arbitrage bursts, enforce SLA tiers, and forecast token futures. A public leaderboard (hourly aggregates) spots the best provider per task family and keeps privacy intact.
 
-## Feature Comparison
+README: updated# Feature Comparison
 
 | Feature | FreeRelay | OpenRouter | Portkey | Helicone |
 |---------|-----------|------------|---------|----------|
@@ -253,7 +253,7 @@ The control plane owns tenant policy objects, capability registry, benchmark cat
 
 
 
-## Use With Your Favorite Tools
+README: updated# Use With Your Favorite Tools
 
 <details>
 <summary><strong>Continue.dev (VS Code)</strong></summary>
@@ -309,17 +309,17 @@ Set the OpenAI API base to `http://localhost:8000/v1`. No API key needed.
 FreeRelay has built-in OpenClaw integration. Start FreeRelay, then fetch the config:
 
 ```bash
-# Start FreeRelay
+README: updated
 python -m freerelay.main
 
-# Get the OpenClaw config snippet
+README: updated config snippet
 curl http://localhost:8000/openclaw/config
 ```
 
 **Option A — Use the onboard wizard (recommended):**
 ```bash
 openclaw onboard --install-daemon
-# When prompted: Manual → Custom → Base URL: http://localhost:8000/v1 → Model: freerelay/auto
+README: updated: Manual → Custom → Base URL: http://localhost:8000/v1 → Model: freerelay/auto
 ```
 
 **Option B — Non-interactive:**
@@ -371,15 +371,15 @@ FreeRelay integrates with OpenCode as both an **API proxy** and **CLI backend**,
 
 **OpenCode API Proxy (Zen + Go catalogs):**
 ```bash
-# Set your OpenCode API key
+README: updated API key
 echo "OPENCODE_API_KEY=your_key_here" >> .env
 
-# Use OpenCode Zen models (Claude, GPT, Gemini)
+README: updated models (Claude, GPT, Gemini)
 curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"freerelay/opencode-claude-sonnet","messages":[{"role":"user","content":"Hello"}]}'
 
-# Use OpenCode Go models (Kimi, GLM, MiniMax)
+README: updated models (Kimi, GLM, MiniMax)
 curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"freerelay/opencode-kimi-k2","messages":[{"role":"user","content":"Write a function"}]}'
@@ -392,15 +392,15 @@ curl http://localhost:8000/opencode/models
 
 **CLI Backend (spawn OpenCode/Codex as subprocess):**
 ```bash
-# Check which CLI backends are available
+README: updated backends are available
 curl http://localhost:8000/opencode/cli-backends
 
-# Run a coding task via OpenCode CLI
+README: updated task via OpenCode CLI
 curl -X POST http://localhost:8000/opencode/cli-run \
   -H "Content-Type: application/json" \
   -d '{"backend":"opencode-cli","prompt":"Write a Python hello world","model":"opencode-claude-sonnet"}'
 
-# Run via Codex CLI
+README: updated CLI
 curl -X POST http://localhost:8000/opencode/cli-run \
   -H "Content-Type: application/json" \
   -d '{"backend":"codex-cli","prompt":"Write a Python hello world"}'
@@ -408,10 +408,10 @@ curl -X POST http://localhost:8000/opencode/cli-run \
 
 **Skills:**
 ```bash
-# List available skills
+README: updated
 curl http://localhost:8000/skills
 
-# Get skills config for OpenClaw
+README: updated for OpenClaw
 curl http://localhost:8000/skills/config
 ```
 
@@ -428,7 +428,7 @@ curl http://localhost:8000/skills/config
 CLI backends communicate via JSONL subprocess with API keys cleared from the environment for security.
 </details>
 
-## Docker
+README: updated# Docker
 
 ```bash
 cd docker
@@ -445,16 +445,16 @@ Starts: FreeRelay + Redis + Jaeger + Prometheus + Grafana
 | Prometheus | http://localhost:9091 |
 | Grafana | http://localhost:3000 (admin/freerelay) |
 
-## 🚀 Deployment
+README: updated# 🚀 Deployment
 
-### Railway (Recommended)
+README: updated## Railway (Recommended)
 
 1. Fork this repository.
 2. Create a new project on Railway and link your fork.
 3. Add the required environment variables (see `.env.example`).
 4. Railway will automatically detect the `railway.json` and `docker/Dockerfile` and deploy the gateway.
 
-### Supabase Setup (Authentication & Usage Tracking)
+README: updated## Supabase Setup (Authentication & Usage Tracking)
 
 FreeRelay supports Supabase for managing API keys and tracking usage.
 
@@ -462,7 +462,7 @@ FreeRelay supports Supabase for managing API keys and tracking usage.
 2. Run the SQL in `supabase_schema.sql` in the SQL Editor to create the necessary tables and indices.
 3. Set `FREERELAY_ENABLE_SUPABASE_AUTH=true` and provide `SUPABASE_URL`, `SUPABASE_KEY`, and `FREERELAY_SUPABASE_SERVICE_ROLE_KEY` (for admin tasks like registration) in your environment.
 
-### Stripe Integration (Payments)
+README: updated## Stripe Integration (Payments)
 
 FreeRelay includes basic Stripe integration for user upgrades.
 
@@ -471,59 +471,59 @@ FreeRelay includes basic Stripe integration for user upgrades.
 3. Use the `/v1/billing/checkout` endpoint to create a checkout session.
 4. Set up a Stripe webhook pointing to `https://your-domain.com/v1/billing/webhook` listening for `checkout.session.completed` events.
 
-## CLI
+README: updated# CLI
 
 ```bash
-# Install as CLI tool
+README: updated tool
 pip install -e .
 
-# Start the gateway
+README: updated
 freerelay start
 
-# Start with chaos mode
+README: updated mode
 freerelay start --chaos
 
-# Check provider status
+README: updated
 freerelay status
 
-# Run a quick benchmark
+README: updated benchmark
 freerelay benchmark --requests 50 --concurrent 10
 ```
 
-## Project Structure
+README: updated# Project Structure
 
 ```
 freerelay/
 ├── freerelay/
-│   ├── main.py                    # FastAPI app factory
+│   ├── main.py                    README: updated
 │   ├── config/
-│   │   ├── settings.py            # Pydantic BaseSettings
-│   │   ├── capability_matrix.yaml # Provider/model capability DB
-│   │   └── routing_rules.yaml    # Routing policy DSL
+│   │   ├── settings.py            README: updated
+│   │   ├── capability_matrix.yaml README: updated/model capability DB
+│   │   └── routing_rules.yaml    README: updated
 │   ├── core/
-│   │   ├── models/openai.py       # Full OpenAI wire format (Pydantic v2)
-│   │   ├── routing/engine.py      # Composite scoring router
-│   │   ├── routing/classifier.py  # Intent classification
-│   │   ├── execution/hedging.py   # Speculative parallel execution
+│   │   ├── models/openai.py       README: updated format (Pydantic v2)
+│   │   ├── routing/engine.py      README: updated
+│   │   ├── routing/classifier.py  README: updated
+│   │   ├── execution/hedging.py   README: updated
 │   │   ├── streaming/backpressure.py
 │   │   └── resilience/
-│   │       ├── circuit_breaker.py # CLOSED→OPEN→HALF_OPEN
-│   │       ├── budget.py          # EWMA budget forecaster
-│   │       └── chaos.py           # Chaos engineering injector
-│   ├── providers/                 # Groq, Google, OpenRouter, Together, Mistral, OpenCode
-│   ├── middleware/                # Auth, audit
-│   ├── observability/             # Prometheus, structlog, health probes
-│   ├── openclaw/                  # OpenClaw integration adapter
-│   ├── cli_backend/               # OpenCode/Codex CLI subprocess backends
-│   ├── skills/                    # Coding skills (OpenCode, Codex, Supervisor)
-│   └── cli/                       # Typer CLI
-├── tests/                         # Unit + integration tests
-├── docker/                        # Dockerfile + compose stack
-├── dashboard/index.html          # Real-time monitoring dashboard
-└── docs/                          # Architecture documentation
+│   │       ├── circuit_breaker.py README: updated→OPEN→HALF_OPEN
+│   │       ├── budget.py          README: updated
+│   │       └── chaos.py           README: updated
+│   ├── providers/                 README: updated, Google, OpenRouter, Together, Mistral, OpenCode
+│   ├── middleware/                README: updated, audit
+│   ├── observability/             README: updated, structlog, health probes
+│   ├── openclaw/                  README: updated
+│   ├── cli_backend/               README: updated/Codex CLI subprocess backends
+│   ├── skills/                    README: updated(OpenCode, Codex, Supervisor)
+│   └── cli/                       README: updated
+├── tests/                         README: updated+ integration tests
+├── docker/                        README: updated+ compose stack
+├── dashboard/index.html          README: updated-time monitoring dashboard
+└── docs/                          README: updated
 ```
 
-## How Routing Works
+README: updated# How Routing Works
 
 1. **Request arrives** → Validated against OpenAI schema
 2. **Intent classified** → coding / math / creative / multilingual / chat (< 5ms)
@@ -532,7 +532,7 @@ freerelay/
 5. **On failure** → Circuit breaker updated, next provider tried automatically
 6. **After response** → Tokens tracked, budget updated, metrics emitted
 
-## FreeRelay v3 MAX Specification
+README: updated# FreeRelay v3 MAX Specification
 
 FreeRelay is grounded in the v3 MAX inference operating system documented in [docs/free_relay_v3_max_spec.md](docs/free_relay_v3_max_spec.md) and the bundled FreeRelay_v3_MAX.zip. The spec lays out the complete control/data-plane split, Redis schema, workload profile schema, routing decision audit trail, expected utility math, DAG engine, validators/repair loops, capability benchmarking, and the 14-day build plan that drives the repo roadmap.
 
@@ -544,7 +544,7 @@ Key capabilities the spec demands:
 - Resilience: circuit breakers, EWMA budget forecasting, AIMD concurrency, brownout, chaos mode, deterministic resume, and streaming backpressure.
 - Control-plane economics, experiments, tenant policy controls, signed audit trails, and the privacy-preserving public leaderboard.
 
-## Roadmap
+README: updated# Roadmap
 
 The v3 MAX spec embeds a 14-day build plan that keeps every merge focused on the same outcome: a workload-aware control plane with intelligent routing, validation, and experiments.
 
@@ -554,7 +554,7 @@ The v3 MAX spec embeds a 14-day build plan that keeps every merge focused on the
 
 Refer to [docs/free_relay_v3_max_spec.md](docs/free_relay_v3_max_spec.md) for the full day-by-day checklist and done criteria.
 
-## Contributing
+README: updated# Contributing
 
 Contributions welcome. Start with [good first issues](https://github.com/HrachShah/FreeRelay/labels/good%20first%20issue).
 
@@ -565,7 +565,7 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
-## License
+README: updated# License
 
 MIT — use it however you want.
 
@@ -575,6 +575,6 @@ MIT — use it however you want.
   <strong>If this saved you money, star the repo ⭐</strong><br/>
   Built by <a href="https://github.com/HrachShah">@HrachShah</a>
 </p>
-# Zo Bot
+README: updated
 fix
 test-run-1776720263
