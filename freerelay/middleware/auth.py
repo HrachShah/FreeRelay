@@ -33,7 +33,7 @@ def _verify_token_supabase(token_hash: str) -> dict[str, str] | None:
         # Join with users table to get the tier
         result = (
             supabase.table("api_keys")
-            .select("user_id, users(tier)")
+            .select("user_id, users(tier, routing_preference)")
             .eq("key_hash", token_hash)
             .eq("is_active", True)
             .execute()
@@ -43,9 +43,11 @@ def _verify_token_supabase(token_hash: str) -> dict[str, str] | None:
             user_id = str(data["user_id"])
             users_data: Any = data.get("users")
             tier = "free"
+            routing_preference = "balanced"
             if isinstance(users_data, dict):
                 tier = str(users_data.get("tier", "free"))
-            return {"user_id": user_id, "tier": tier}
+                routing_preference = str(users_data.get("routing_preference", "balanced"))
+            return {"user_id": user_id, "tier": tier, "routing_preference": routing_preference}
         return None
     except Exception as e:
         logger.error(f"Supabase auth error: {e}")
@@ -86,6 +88,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             if self.api_key and token == self.api_key:
                 request.state.user_id = "admin"
                 request.state.tier = "gold"
+                request.state.routing_preference = "balanced"
                 return await call_next(request)
             
             # 2. Supabase check
@@ -95,6 +98,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 if user_info:
                     request.state.user_id = user_info["user_id"]
                     request.state.tier = user_info["tier"]
+                    request.state.routing_preference = user_info["routing_preference"]
                     return await call_next(request)
 
         return JSONResponse(

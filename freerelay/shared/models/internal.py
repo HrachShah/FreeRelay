@@ -316,6 +316,13 @@ class RegisterRequest(BaseModel):
 class RegisterResponse(BaseModel):
     api_key: str
 
+class TenantSettingsRequest(BaseModel):
+    routing_preference: str # 'cost-optimized', 'balanced', 'performance-first'
+
+class TenantSettingsResponse(BaseModel):
+    success: bool
+    routing_preference: str
+
 
 class CheckoutRequest(BaseModel):
     email: str
