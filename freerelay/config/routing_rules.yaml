@@ -28,3 +28,9 @@ rules:
       - human_gate: true
       - policy_weight: 1.5
     fallback: none
+  - name: cheapest_viable_default
+    condition: "workload.precision_sensitivity != 'high' and workload.reasoning_depth < 3"
+    actions:
+      - prefer: [openai/gpt-4o-mini, google/gemini-1.5-flash, groq/llama-3-8b-8192, together/meta-llama/Llama-3.1-8B-Instruct-Turbo]
+      - policy_weight: 0.8
+    fallback: any

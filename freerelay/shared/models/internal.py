@@ -309,6 +309,49 @@ class AuditRecord(BaseModel):
 # ─── Auth & Billing ──────────────────────────────────────────────────────────
 
 
+class ModelUsage(BaseModel):
+    model: str
+    request_count: int
+    total_tokens: int
+    total_cost: float
+    total_savings: float
+
+
+class DailySavings(BaseModel):
+    date: str
+    savings: float
+
+
+class UsageAnalytics(BaseModel):
+    total_spend: float
+    total_savings: float
+    model_breakdown: list[ModelUsage]
+    savings_trend: list[DailySavings]
+
+
+class RequestLogEntry(BaseModel):
+    id: str
+    request_id: str | None = None
+    timestamp: str
+    model: str
+    provider: str
+    success: bool = True
+    latency_ms: float
+    tokens: int
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cost: float
+    savings: float
+    decision_reason: str | None = None
+
+
+class RequestLogResponse(BaseModel):
+    items: list[RequestLogEntry]
+    total: int
+    limit: int
+    offset: int
+
+
 class RegisterRequest(BaseModel):
     email: str
 

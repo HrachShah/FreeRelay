@@ -31,6 +31,8 @@ class ModelCapability(BaseModel):
     supports_vision: bool = False
     supports_json_mode: bool = False
     supports_logprobs: bool = False
+    input_price_per_1m: float = 0.0
+    output_price_per_1m: float = 0.0
 
 
 class CapabilityMatrix(BaseModel):

@@ -30,6 +30,7 @@ from freerelay.core.models.openai import (
 )
 from freerelay.core.observability.outcome import OutcomeLogger, OutcomeRecord
 from freerelay.core.observability.supabase_logger import SupabaseUsageLogger
+from freerelay.core.observability.team_db_logger import TeamDbUsageLogger
 from freerelay.core.resilience.budget import BudgetForecaster
 from freerelay.core.resilience.chaos import ChaosInjector
 from freerelay.core.resilience.circuit_breaker import CircuitBreaker
@@ -83,6 +84,7 @@ class ProviderSlot:
 class RequestContext:
     request_id: str
     user_id: str | None
+    org_id: str | None
     original_request: ChatCompletionRequest
     optimized_request: ChatCompletionRequest
     workload_profile: WorkloadProfile
@@ -93,11 +95,12 @@ class RequestContext:
     schema_success_ratio: float
     tenant_tier: str
     policy_directive: RoutingDirective = field(default_factory=RoutingDirective)
+    decision_reason: str | None = None
 
     def policy_context(self) -> dict[str, Any]:
         return {
             "workload": self.workload_profile.to_dict(),
-            "tenant": {"id": self.user_id, "tier": self.tenant_tier},
+            "tenant": {"id": self.user_id, "org_id": self.org_id, "tier": self.tenant_tier},
             "schema": {"success_ratio": self.schema_success_ratio},
             "compression": {
                 "tokens_saved": self.compression.tokens_saved,
@@ -120,10 +123,29 @@ class RoutingEngine:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.slots: list[ProviderSlot] = []
-        self.budget = BudgetForecaster(
-            alpha=settings.budget_ewma_alpha,
-            safety_margin=settings.budget_safety_margin_tokens,
-        )
+        
+        # Redis support
+        if settings.enable_redis:
+            from freerelay.shared.redis import get_redis_client
+            from freerelay.core.resilience.redis_budget import RedisBudgetForecaster
+            redis_client = get_redis_client(settings)
+            if redis_client:
+                self.budget = RedisBudgetForecaster(
+                    redis=redis_client,
+                    alpha=settings.budget_ewma_alpha,
+                    safety_margin=settings.budget_safety_margin_tokens,
+                )
+            else:
+                self.budget = BudgetForecaster(
+                    alpha=settings.budget_ewma_alpha,
+                    safety_margin=settings.budget_safety_margin_tokens,
+                )
+        else:
+            self.budget = BudgetForecaster(
+                alpha=settings.budget_ewma_alpha,
+                safety_margin=settings.budget_safety_margin_tokens,
+            )
+
         self.chaos = ChaosInjector(
             enabled=settings.enable_chaos,
             intensity=settings.chaos_intensity,
@@ -141,6 +163,7 @@ class RoutingEngine:
         self.validator = ValidatorChain()
         self.outcome_logger = OutcomeLogger()
         self.supabase_logger = SupabaseUsageLogger()
+        self.team_db_logger = TeamDbUsageLogger()
         self.max_repair_attempts = settings.max_repair_attempts
 
     def _load_capability_matrix(self, settings: Settings) -> CapabilityMatrix | None:
@@ -183,12 +206,33 @@ class RoutingEngine:
         daily_limit: int | None = None,
         tier: str = "free",
     ) -> None:
-        circuit = CircuitBreaker(
-            provider_name=provider.name,
-            failure_threshold=self.settings.circuit_failure_threshold,
-            failure_window=self.settings.circuit_failure_window,
-            recovery_timeout=self.settings.circuit_recovery_timeout,
-        )
+        if self.settings.enable_redis:
+            from freerelay.shared.redis import get_redis_client
+            from freerelay.core.resilience.redis_breaker import RedisCircuitBreaker
+            redis = get_redis_client(self.settings)
+            if redis:
+                circuit = RedisCircuitBreaker(
+                    redis=redis,
+                    provider_name=provider.name,
+                    failure_threshold=self.settings.circuit_failure_threshold,
+                    failure_window=self.settings.circuit_failure_window,
+                    recovery_timeout=self.settings.circuit_recovery_timeout,
+                )
+            else:
+                circuit = CircuitBreaker(
+                    provider_name=provider.name,
+                    failure_threshold=self.settings.circuit_failure_threshold,
+                    failure_window=self.settings.circuit_failure_window,
+                    recovery_timeout=self.settings.circuit_recovery_timeout,
+                )
+        else:
+            circuit = CircuitBreaker(
+                provider_name=provider.name,
+                failure_threshold=self.settings.circuit_failure_threshold,
+                failure_window=self.settings.circuit_failure_window,
+                recovery_timeout=self.settings.circuit_recovery_timeout,
+            )
+            
         self.slots.append(
             ProviderSlot(
                 provider=provider,
@@ -198,13 +242,23 @@ class RoutingEngine:
             )
         )
         if daily_limit is not None:
-            self.budget.set_daily_limit(provider.name, daily_limit)
+            import inspect
+            res = self.budget.set_daily_limit(provider.name, daily_limit)
+            if inspect.isawaitable(res):
+                # This is tricky because register_provider is sync
+                # We'll use a task or run it in the event loop if it's already running
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(res)
+                except RuntimeError:
+                    asyncio.run(res)
         logger.info(f"Registered provider: {provider.name} (tier: {tier})")
 
     def _prepare_context(
         self,
         request: ChatCompletionRequest,
         user_id: str | None = None,
+        org_id: str | None = None,
         tier: str = "free",
     ) -> RequestContext:
         profile = self.profiler.profile(request)
@@ -212,6 +266,7 @@ class RoutingEngine:
         return RequestContext(
             request_id=f"req_{uuid.uuid4().hex[:12]}",
             user_id=user_id,
+            org_id=org_id,
             original_request=request,
             optimized_request=bundle.optimized_request,
             workload_profile=profile,
@@ -277,7 +332,14 @@ class RoutingEngine:
 
             if not await slot.circuit.can_execute():
                 continue
-            if self.budget.is_budget_exhausted(slot.provider.name):
+                
+            # Handle both sync and async budget forecasters
+            import inspect
+            exhausted_res = self.budget.is_budget_exhausted(slot.provider.name)
+            if inspect.isawaitable(exhausted_res):
+                if await exhausted_res:
+                    continue
+            elif exhausted_res:
                 continue
 
             # In auto mode, filter by tier preference
@@ -303,7 +365,7 @@ class RoutingEngine:
 
         scored: list[tuple[float, ProviderSlot]] = []
         for slot in available:
-            score = compute_expected_utility(
+            score = await compute_expected_utility(
                 slot=slot,
                 profile=context.workload_profile,
                 capability_matrix=self.capability_matrix,
@@ -314,6 +376,19 @@ class RoutingEngine:
 
         scored.sort(key=lambda item: item[0], reverse=True)
         ranked = [slot for _, slot in scored]
+
+        # Set decision reason
+        if ranked:
+            best_slot = ranked[0]
+            reason = f"Utility: {best_slot.provider.name} scored highest for {context.workload_profile.task_family}"
+            
+            # More specific reasons based on profile
+            if context.workload_profile.economic_policy == "cheapest":
+                reason = f"Cost: {best_slot.provider.name} is the cheapest viable option"
+            elif context.workload_profile.required_depth == "deep":
+                reason = f"Quality: {best_slot.provider.name} selected for high-complexity reasoning"
+            
+            context.decision_reason = reason
 
         if policy_order != candidate_names:
             name_to_slot = {slot.provider.name: slot for slot in ranked}
@@ -333,9 +408,10 @@ class RoutingEngine:
         self,
         request: ChatCompletionRequest,
         user_id: str | None = None,
+        org_id: str | None = None,
         tier: str = "free",
     ) -> ChatCompletionResponse:
-        context = self._prepare_context(request, user_id=user_id, tier=tier)
+        context = self._prepare_context(request, user_id=user_id, org_id=org_id, tier=tier)
         ranked, directive = await self._ranked_slots(context)
 
         if not ranked:
@@ -371,7 +447,13 @@ class RoutingEngine:
                 slot.record_latency(elapsed_ms)
                 slot.request_count += 1
                 tokens = response.usage.total_tokens if response.usage else 0
-                self.budget.record_tokens(provider.name, tokens)
+                
+                # Handle both sync and async budget forecasters
+                import inspect
+                budget_res = self.budget.record_tokens(provider.name, tokens)
+                if inspect.isawaitable(budget_res):
+                    await budget_res
+                    
                 context.schema_success_ratio = 0.99 if validation.schema_pass else 0.7
 
                 alternatives = [
@@ -381,10 +463,12 @@ class RoutingEngine:
                 self._log_outcome(
                     context=context,
                     provider_name=provider.name,
+                    model=response.model or "",
                     success=True,
                     schema_pass=validation.schema_pass,
                     latency_ms=elapsed_ms,
-                    cost_tokens=tokens,
+                    prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
+                    completion_tokens=response.usage.completion_tokens if response.usage else 0,
                     alternatives=alternatives,
                     notes=notes,
                 )
@@ -424,10 +508,12 @@ class RoutingEngine:
         self._log_outcome(
             context=context,
             provider_name="",
+            model=request.model or "",
             success=False,
             schema_pass=None,
             latency_ms=0.0,
-            cost_tokens=0,
+            prompt_tokens=0,
+            completion_tokens=0,
             alternatives=provider_names,
             notes=notes,
         )
@@ -438,9 +524,10 @@ class RoutingEngine:
         self,
         request: ChatCompletionRequest,
         user_id: str | None = None,
+        org_id: str | None = None,
         tier: str = "free",
     ) -> Any:
-        context = self._prepare_context(request, user_id=user_id, tier=tier)
+        context = self._prepare_context(request, user_id=user_id, org_id=org_id, tier=tier)
         ranked, _ = await self._ranked_slots(context)
 
         if not ranked:
@@ -483,14 +570,21 @@ class RoutingEngine:
                 prompt_tokens = context.total_tokens
                 total_tokens = prompt_tokens + completion_tokens
 
-                self.budget.record_tokens(provider.name, total_tokens)
+                # Handle both sync and async budget forecasters
+                import inspect
+                budget_res = self.budget.record_tokens(provider.name, total_tokens)
+                if inspect.isawaitable(budget_res):
+                    await budget_res
+                    
                 self._log_outcome(
                     context=context,
                     provider_name=provider.name,
+                    model=context.optimized_request.model or "stream",
                     success=True,
                     schema_pass=True, # Streams are usually successful if they finish
                     latency_ms=elapsed_ms,
-                    cost_tokens=total_tokens,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
                     alternatives=[],
                     notes="streamed",
                 )
@@ -573,41 +667,84 @@ class RoutingEngine:
         self,
         context: RequestContext,
         provider_name: str,
+        model: str,
         success: bool,
         schema_pass: bool | None,
         latency_ms: float,
-        cost_tokens: int,
+        prompt_tokens: int,
+        completion_tokens: int,
         alternatives: list[str],
         notes: str | None = None,
     ) -> None:
+        # Calculate costs
+        cost_usd = 0.0
+        baseline_cost_usd = 0.0
+        
+        # 1. Calculate actual cost
+        if success and provider_name and model:
+            full_model_id = f"{provider_name}/{model}"
+            cap = self.capability_matrix.get_model(full_model_id) if self.capability_matrix else None
+            if cap:
+                cost_usd = (prompt_tokens * cap.input_price_per_1m + completion_tokens * cap.output_price_per_1m) / 1_000_000.0
+        
+        # 2. Calculate baseline cost (e.g., what it would have cost on GPT-4o-2024-08-06)
+        # GPT-4o prices: $2.50 / 1M input, $10.00 / 1M output (approximate for MVP)
+        baseline_cost_usd = (prompt_tokens * 2.50 + completion_tokens * 10.00) / 1_000_000.0
+        
+        savings_usd = max(0.0, baseline_cost_usd - cost_usd) if success else 0.0
+
+        # Combine specific notes with the general decision reason
+        actual_notes = notes
+        if context.decision_reason:
+            if actual_notes:
+                actual_notes = f"{actual_notes}; {context.decision_reason}"
+            else:
+                actual_notes = context.decision_reason
+
         record = OutcomeRecord(
             request_id=context.request_id,
             user_id=context.user_id,
+            org_id=context.org_id,
             selected_provider=provider_name,
+            model=model,
             alternatives=alternatives,
             success=success,
             schema_pass=schema_pass,
             latency_ms=latency_ms,
-            cost_tokens=cost_tokens,
+            cost_tokens=prompt_tokens + completion_tokens,
+            tokens_prompt=prompt_tokens,
+            tokens_completion=completion_tokens,
+            cost_usd=cost_usd,
+            baseline_cost_usd=baseline_cost_usd,
+            savings_usd=savings_usd,
             hallucination_signal=0.0,
             downstream_success=None,
-            notes=notes,
+            notes=actual_notes,
         )
         self.outcome_logger.log(record)
         self.supabase_logger.log(record)
+        self.team_db_logger.log(record)
 
-    def get_stats(self) -> list[dict[str, object]]:
-        return [
-            {
+    async def get_stats(self) -> list[dict[str, object]]:
+        stats = []
+        for slot in self.slots:
+            # Handle both sync and async budget forecasters
+            import inspect
+            budget_res = self.budget.get_stats(slot.provider.name)
+            if inspect.isawaitable(budget_res):
+                budget_stats = await budget_res
+            else:
+                budget_stats = budget_res
+                
+            stats.append({
                 "name": slot.provider.name,
                 "circuit": slot.circuit.to_dict(),
-                "budget": self.budget.get_stats(slot.provider.name),
+                "budget": budget_stats,
                 "latency_p95_ms": round(slot.latency_p95_ms, 1),
                 "request_count": slot.request_count,
                 "error_count": slot.error_count,
-            }
-            for slot in self.slots
-        ]
+            })
+        return stats
 
     def get_models(self) -> list[Any]:
         """Aggregate models from all registered provider slots."""

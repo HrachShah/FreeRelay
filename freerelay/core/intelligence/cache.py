@@ -9,11 +9,16 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import json
 import logging
 import time
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Optional
 
 from freerelay.core.models.openai import ChatCompletionRequest, ChatCompletionResponse
+
+if TYPE_CHECKING:
+    from redis.asyncio import Redis
 
 logger = logging.getLogger("freerelay.cache")
 
@@ -51,6 +56,15 @@ class SemanticCache:
 
         self._entries: dict[str, CacheEntry] = {}
         self._lsh: object | None = None
+
+        # Redis support
+        from freerelay.config.settings import get_settings
+        settings = get_settings()
+        self.enable_redis = settings.enable_redis
+        self._redis: Optional[Redis] = None
+        if self.enable_redis:
+            from freerelay.shared.redis import get_redis_client
+            self._redis = get_redis_client(settings)
 
         if enabled:
             self._init_lsh()
@@ -116,7 +130,7 @@ class SemanticCache:
         """Compute a cache key from canonical text."""
         return hashlib.sha256(text.encode("utf-8")).hexdigest()[:32]
 
-    def lookup(self, request: ChatCompletionRequest) -> ChatCompletionResponse | None:
+    async def lookup(self, request: ChatCompletionRequest) -> ChatCompletionResponse | None:
         """
         Look up a request in the cache.
 
@@ -128,39 +142,58 @@ class SemanticCache:
         canonical = self._canonicalize(request)
         key = self._compute_key(canonical)
 
-        # Exact match first
-        entry = self._entries.get(key)
-        if entry and (time.time() - entry.created_at) < entry.ttl:
-            try:
-                return ChatCompletionResponse.model_validate_json(entry.response_json)
-            except Exception:
-                del self._entries[key]
-                return None
+        # Exact match first (Redis)
+        if self._redis:
+            redis_key = f"freerelay:cache:{key}"
+            cached_json = await self._redis.get(redis_key)
+            if cached_json:
+                try:
+                    return ChatCompletionResponse.model_validate_json(cached_json)
+                except Exception:
+                    pass
+        else:
+            # Exact match first (In-memory)
+            entry = self._entries.get(key)
+            if entry and (time.time() - entry.created_at) < entry.ttl:
+                try:
+                    return ChatCompletionResponse.model_validate_json(entry.response_json)
+                except Exception:
+                    del self._entries[key]
+                    return None
 
         # Semantic match via LSH
         if self._lsh is not None:
             minhash = self._text_to_minhash(canonical)
             if minhash is not None:
                 try:
-                    results = self._lsh.query(minhash)
+                    results = self._lsh.query(minhash) # type: ignore
                     for result_key in results:
-                        candidate = self._entries.get(result_key)
-                        if (
-                            candidate
-                            and (time.time() - candidate.created_at) < candidate.ttl
-                        ):
-                            try:
-                                return ChatCompletionResponse.model_validate_json(
-                                    candidate.response_json
-                                )
-                            except Exception:
-                                continue
+                        if self._redis:
+                            redis_key = f"freerelay:cache:{result_key}"
+                            cached_json = await self._redis.get(redis_key)
+                            if cached_json:
+                                try:
+                                    return ChatCompletionResponse.model_validate_json(cached_json)
+                                except Exception:
+                                    continue
+                        else:
+                            candidate = self._entries.get(result_key)
+                            if (
+                                candidate
+                                and (time.time() - candidate.created_at) < candidate.ttl
+                            ):
+                                try:
+                                    return ChatCompletionResponse.model_validate_json(
+                                        candidate.response_json
+                                    )
+                                except Exception:
+                                    continue
                 except Exception:
                     pass
 
         return None
 
-    def store(
+    async def store(
         self,
         request: ChatCompletionRequest,
         response: ChatCompletionResponse,
@@ -171,23 +204,39 @@ class SemanticCache:
 
         canonical = self._canonicalize(request)
         key = self._compute_key(canonical)
+        response_json = response.model_dump_json(exclude_none=True)
 
-        minhash = self._text_to_minhash(canonical)
+        if self._redis:
+            redis_key = f"freerelay:cache:{key}"
+            await self._redis.setex(redis_key, self.ttl, response_json)
+        else:
+            minhash = self._text_to_minhash(canonical)
+            entry = CacheEntry(
+                key=key,
+                minhash=minhash,
+                response_json=response_json,
+                ttl=self.ttl,
+            )
+            self._entries[key] = entry
+            
+            if self._lsh is not None and minhash is not None:
+                try:
+                    self._lsh.insert(key, minhash) # type: ignore
+                except ValueError:
+                    pass  # Key already exists
 
-        entry = CacheEntry(
-            key=key,
-            minhash=minhash,
-            response_json=response.model_dump_json(exclude_none=True),
-            ttl=self.ttl,
-        )
-
-        self._entries[key] = entry
-
-        if self._lsh is not None and minhash is not None:
-            try:
-                self._lsh.insert(key, minhash)
-            except ValueError:
-                pass  # Key already exists
+        # For semantic matching, we still need to maintain the local LSH index
+        # if Redis is used but we want semantic search. 
+        # In a real cluster, we'd need a more robust approach.
+        # But for now, if Redis is enabled, we still use the local LSH index for lookups.
+        # So we should insert into LSH even if using Redis for storage.
+        if self._redis and self._lsh is not None:
+            minhash = self._text_to_minhash(canonical)
+            if minhash is not None:
+                try:
+                    self._lsh.insert(key, minhash) # type: ignore
+                except ValueError:
+                    pass
 
         # Evict old entries
         self._evict_expired()

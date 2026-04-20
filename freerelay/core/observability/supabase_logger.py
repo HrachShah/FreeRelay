@@ -22,10 +22,17 @@ class SupabaseUsageLogger:
             supabase.table("usage_logs").insert({
                 "request_id": record.request_id,
                 "user_id": record.user_id,
+                "org_id": record.org_id,
                 "provider": record.selected_provider,
+                "model": record.model,
                 "success": record.success,
                 "latency_ms": record.latency_ms,
                 "tokens": record.cost_tokens,
+                "prompt_tokens": record.tokens_prompt,
+                "completion_tokens": record.tokens_completion,
+                "cost_usd": record.cost_usd,
+                "baseline_cost_usd": record.baseline_cost_usd,
+                "savings_usd": record.savings_usd,
                 "schema_pass": record.schema_pass,
                 "notes": record.notes
             }).execute()

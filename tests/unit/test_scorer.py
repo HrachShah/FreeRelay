@@ -4,6 +4,8 @@ Tests — Provider Scorer
 Verify composite scoring functions per spec §14.1.
 """
 
+import pytest
+
 from freerelay.core.models.capability import CapabilityMatrix, ModelCapability
 from freerelay.core.resilience.budget import BudgetForecaster
 from freerelay.core.resilience.circuit_breaker import CircuitBreaker
@@ -85,10 +87,11 @@ class TestLatencyScore:
 
 
 class TestCompositeScore:
-    def test_all_good(self) -> None:
+    @pytest.mark.asyncio
+    async def test_all_good(self) -> None:
         cb = CircuitBreaker("test")
         budget = BudgetForecaster()
-        score = compute_composite_score(
+        score = await compute_composite_score(
             "test",
             "coding",
             cb,
@@ -97,13 +100,12 @@ class TestCompositeScore:
         )
         assert score == 0.8  # capability default
 
-    def test_open_circuit_zeroes_score(self) -> None:
-        import asyncio
-
+    @pytest.mark.asyncio
+    async def test_open_circuit_zeroes_score(self) -> None:
         cb = CircuitBreaker("test", failure_threshold=1)
-        asyncio.run(cb.record_failure(500))
+        await cb.record_failure(500)
         budget = BudgetForecaster()
-        score = compute_composite_score(
+        score = await compute_composite_score(
             "test",
             "coding",
             cb,

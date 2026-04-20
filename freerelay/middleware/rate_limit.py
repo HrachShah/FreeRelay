@@ -10,11 +10,15 @@ from __future__ import annotations
 import logging
 import time
 from collections import OrderedDict
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
+
+if TYPE_CHECKING:
+    from redis.asyncio import Redis
 
 logger = logging.getLogger("freerelay.rate_limit")
 
@@ -89,6 +93,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._buckets: OrderedDict[str, TokenBucket] = OrderedDict()
         self._rate = requests_per_minute / 60.0  # tokens per second
         self._request_count = 0
+        
+        # Redis support
+        from freerelay.config.settings import get_settings
+        settings = get_settings()
+        self.enable_redis = settings.enable_redis
+        self._redis: Optional[Redis] = None
+        self._limiter = None
+        
+        if self.enable_redis:
+            from freerelay.shared.redis import get_redis_client
+            from freerelay.data_plane.ingress.rate_limit import RateLimiter
+            self._redis = get_redis_client(settings)
+            if self._redis:
+                self._limiter = RateLimiter(redis=self._redis, window_seconds=60)
 
     def _get_bucket(self, client_ip: str) -> TokenBucket:
         """Get or create a token bucket for a client with LRU eviction."""
@@ -140,6 +158,29 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Identify by user_id if available (from AuthMiddleware), otherwise IP
         user_id = getattr(request.state, "user_id", None)
         client_id = user_id or (request.client.host if request.client else "unknown")
+        
+        # Use Redis limiter if available
+        if self._limiter:
+            result = await self._limiter.check_rate_limit(client_id, self.requests_per_minute)
+            if not result.allowed:
+                logger.warning("Rate limit exceeded for %s (Redis)", client_id)
+                return JSONResponse(
+                    status_code=429,
+                    content={
+                        "error": {
+                            "message": "Rate limit exceeded. Try again later.",
+                            "type": "rate_limit_error",
+                            "code": 429,
+                        }
+                    },
+                    headers={
+                        "Retry-After": "1",
+                        "X-RateLimit-Limit": str(self.requests_per_minute),
+                        "X-RateLimit-Remaining": "0",
+                    },
+                )
+            return await call_next(request)
+
         bucket = self._get_bucket(client_id)
 
         if not bucket.consume():

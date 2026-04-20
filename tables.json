@@ -1,0 +1,35 @@
+[
+  {
+    "name": "config"
+  },
+  {
+    "name": "agents"
+  },
+  {
+    "name": "tasks"
+  },
+  {
+    "name": "inbox"
+  },
+  {
+    "name": "turso_sync_last_change_id"
+  },
+  {
+    "name": "users"
+  },
+  {
+    "name": "api_keys"
+  },
+  {
+    "name": "usage_logs"
+  },
+  {
+    "name": "sqlite_sequence"
+  },
+  {
+    "name": "turso_cdc"
+  },
+  {
+    "name": "turso_cdc_version"
+  }
+]

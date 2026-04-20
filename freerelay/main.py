@@ -12,6 +12,7 @@ Production AI gateway with:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections.abc import AsyncIterator
@@ -38,6 +39,8 @@ from freerelay.shared.models.internal import (
     CheckoutResponse,
     RegisterRequest,
     RegisterResponse,
+    UsageAnalytics,
+    RequestLogResponse,
 )
 
 logger = logging.getLogger("freerelay")
@@ -64,6 +67,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Build engine
     _engine = create_routing_engine(settings)
 
+    # Initialize Redis
+    if settings.enable_redis:
+        from freerelay.shared.redis import get_redis_client
+        get_redis_client(settings)
+        logger.info(f"Redis initialized at {settings.redis_url}")
+
+    # Start Stripe billing worker
+    from freerelay.integrations.stripe_pipeline import stripe_billing_worker
+    
+    billing_task = asyncio.create_task(stripe_billing_worker())
+
     count = len(_engine.slots)
     logger.info("=" * 56)
     logger.info("  ⚡ FreeRelay AI Gateway v0.1.0")
@@ -78,10 +92,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     yield
 
+    # Stop Stripe billing worker
+    billing_task.cancel()
+    try:
+        await billing_task
+    except asyncio.CancelledError:
+        pass
+
     # Cleanup shared HTTP client
     from freerelay.shared.http_client import close_client
-
     await close_client()
+
+    # Cleanup Redis
+    if settings.enable_redis:
+        from freerelay.shared.redis import close_redis
+        await close_redis()
 
     logger.info("FreeRelay shutting down.")
 
@@ -226,11 +251,12 @@ def create_app() -> FastAPI:
         )
 
         user_id = getattr(request.state, "user_id", None)
+        org_id = getattr(request.state, "org_id", None)
         tier = getattr(request.state, "tier", "free")
 
         if req.is_streaming():
             return StreamingResponse(
-                engine.route_stream(req, user_id=user_id, tier=tier),
+                engine.route_stream(req, user_id=user_id, org_id=org_id, tier=tier),
                 media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
@@ -239,7 +265,7 @@ def create_app() -> FastAPI:
                 },
             )
 
-        response = await engine.route(req, user_id=user_id, tier=tier)
+        response = await engine.route(req, user_id=user_id, org_id=org_id, tier=tier)
 
         if "error" in response.model_dump():
             return JSONResponse(
@@ -255,9 +281,53 @@ def create_app() -> FastAPI:
             return {"providers": [], "timestamp": int(time.time())}
 
         return {
-            "providers": engine.get_stats(),
+            "providers": await engine.get_stats(),
             "timestamp": int(time.time()),
         }
+
+    @app.get("/v1/analytics")
+    async def analytics(request: Request) -> UsageAnalytics:
+        from freerelay.observability.analytics import get_usage_analytics
+
+        org_id = getattr(request.state, "org_id", None)
+        if not org_id:
+            return UsageAnalytics(
+                total_spend=0.0,
+                total_savings=0.0,
+                model_breakdown=[],
+                savings_trend=[],
+            )
+
+        return get_usage_analytics(org_id)
+
+    @app.get("/v1/requests")
+    async def requests(
+        request: Request,
+        limit: int = 20,
+        offset: int = 0,
+        model: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> RequestLogResponse:
+        from freerelay.observability.analytics import get_request_logs
+
+        org_id = getattr(request.state, "org_id", None)
+        if not org_id:
+            return RequestLogResponse(
+                items=[],
+                total=0,
+                limit=limit,
+                offset=offset,
+            )
+
+        return get_request_logs(
+            org_id,
+            limit=limit,
+            offset=offset,
+            model=model,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     # ── Auth & Billing ───────────────────────────────────────────
 
@@ -289,9 +359,27 @@ def create_app() -> FastAPI:
             user_data: Any = user_res.data[0]
             user_id = str(user_data["id"])
 
-            # 2. Store hashed key
+            # 2. Create organization
+            org_res = (
+                supabase.table("organizations")
+                .insert({"name": f"{req.email}'s Org", "tier": "free"})
+                .execute()
+            )
+            org_id = org_res.data[0]["id"]
+
+            # 3. Link user to organization
+            supabase.table("organization_members").insert(
+                {"org_id": org_id, "user_id": user_id, "role": "owner"}
+            ).execute()
+
+            # 4. Store hashed key (linked to org)
             supabase.table("api_keys").insert(
-                {"user_id": user_id, "key_hash": key_hash, "label": "Default Key"}
+                {
+                    "user_id": user_id,
+                    "org_id": org_id,
+                    "key_hash": key_hash,
+                    "label": "Default Key",
+                }
             ).execute()
 
             return RegisterResponse(api_key=api_key)
@@ -303,11 +391,12 @@ def create_app() -> FastAPI:
             )  # type: ignore
 
     @app.post("/v1/billing/checkout", response_model=None)
-    async def billing_checkout(req: CheckoutRequest) -> CheckoutResponse:
+    async def billing_checkout(request: Request, req: CheckoutRequest) -> CheckoutResponse:
         from freerelay.integrations.stripe import create_checkout_session
 
+        org_id = getattr(request.state, "org_id", None)
         try:
-            session = create_checkout_session(req.email, req.price_id)
+            session = create_checkout_session(req.email, req.price_id, org_id=org_id)
             return CheckoutResponse(url=session.url)
         except Exception as e:
             logger.exception("Stripe session creation failed")
@@ -336,14 +425,33 @@ def create_app() -> FastAPI:
         if event["type"] == "checkout.session.completed":
             session = event["data"]["object"]
             email = session.get("customer_email")
-            # Upgrade user to bronze/silver based on price_id or metadata
-            # For MVP, we just set to 'bronze'
-            if email:
-                supabase = get_supabase_admin_client()
-                supabase.table("users").update({"tier": "bronze"}).eq(
-                    "email", email
-                ).execute()
-                logger.info(f"User {email} upgraded to bronze")
+            org_id = session.get("client_reference_id")
+            subscription_id = session.get("subscription")
+            
+            if subscription_id:
+                # Get the subscription to find the subscription item
+                subscription = stripe.Subscription.retrieve(subscription_id)
+                subscription_item_id = subscription['items']['data'][0]['id']
+                
+                # Update organization
+                sql = f"UPDATE organizations SET stripe_customer_id = '{session.get('customer')}', stripe_subscription_item_id = '{subscription_item_id}', tier = 'bronze' WHERE id = '{org_id}'"
+                if not org_id and email:
+                    # Fallback to email if client_reference_id is missing
+                    sql = f"UPDATE organizations SET stripe_customer_id = '{session.get('customer')}', stripe_subscription_item_id = '{subscription_item_id}', tier = 'bronze' WHERE id IN (SELECT org_id FROM users JOIN organization_members ON users.id = organization_members.user_id WHERE users.email = '{email}' LIMIT 1)"
+                
+                import subprocess
+                subprocess.run(["team-db", sql], check=True, capture_output=True)
+                logger.info(f"Organization {org_id or email} upgraded to bronze and linked to Stripe")
+
+        elif event["type"] == "customer.subscription.deleted":
+            subscription = event["data"]["object"]
+            customer_id = subscription.get("customer")
+            
+            # Downgrade organization to free
+            sql = f"UPDATE organizations SET tier = 'free', stripe_subscription_item_id = NULL WHERE stripe_customer_id = '{customer_id}'"
+            import subprocess
+            subprocess.run(["team-db", sql], check=True, capture_output=True)
+            logger.info(f"Organization with customer {customer_id} downgraded to free due to subscription deletion")
 
         return Response(status_code=200)
 

@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     # ── Redis ─────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379"
     enable_redis: bool = False  # Start without Redis by default
+    redis_use_cluster: bool = False
 
     # ── Timeouts ──────────────────────────────────────────
     request_timeout: int = 60  # seconds

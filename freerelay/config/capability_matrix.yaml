@@ -2,6 +2,31 @@
 # Provider/model capability database for intelligent routing.
 
 models:
+  openai/gpt-4o:
+    provider: openai
+    context_window: 128000
+    strengths: [reasoning, coding, vision]
+    weaknesses: []
+    speed_tier: fast
+    quality_tier: high
+    supports_streaming: true
+    supports_tools: true
+    supports_vision: true
+    supports_json_mode: true
+    input_price_per_1m: 2.50
+    output_price_per_1m: 10.00
+  openai/gpt-4o-mini:
+    provider: openai
+    context_window: 128000
+    strengths: [speed, simple_chat, instruction_following]
+    weaknesses: [complex_coding]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    supports_tools: true
+    supports_json_mode: true
+    input_price_per_1m: 0.15
+    output_price_per_1m: 0.60
   groq/llama-3.1-70b-versatile:
     provider: groq
     context_window: 131072
@@ -14,6 +39,8 @@ models:
     supports_vision: false
     supports_json_mode: true
     supports_logprobs: false
+    input_price_per_1m: 0.0
+    output_price_per_1m: 0.0
     free_tier:
       rpm: 30
       tpm: 6000
@@ -27,6 +54,8 @@ models:
     speed_tier: fast
     quality_tier: medium
     supports_streaming: true
+    input_price_per_1m: 0.0
+    output_price_per_1m: 0.0
     free_tier:
       rpm: 30
       tpm: 6000
@@ -40,6 +69,8 @@ models:
     speed_tier: fast
     quality_tier: medium
     supports_streaming: true
+    input_price_per_1m: 0.0
+    output_price_per_1m: 0.0
     free_tier:
       rpm: 30
       tpm: 6000
@@ -68,6 +99,8 @@ models:
     supports_streaming: true
     supports_vision: true
     supports_json_mode: true
+    input_price_per_1m: 0.0
+    output_price_per_1m: 0.0
     free_tier:
       rpm: 15
       tpm: 1000000
@@ -164,3 +197,13 @@ models:
       rpm: null
       tpm: null
       tpd: null
+
+  demo/demo-model:
+    provider: demo
+    context_window: 4096
+    strengths: [testing]
+    speed_tier: fast
+    quality_tier: low
+    supports_streaming: true
+    input_price_per_1m: 0.0
+    output_price_per_1m: 0.0

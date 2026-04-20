@@ -17,12 +17,19 @@ class OutcomeRecord:
 
     request_id: str
     user_id: str | None = None
+    org_id: str | None = None
     selected_provider: str = ""
+    model: str = ""
     alternatives: list[str] = field(default_factory=list)
     success: bool = False
     schema_pass: bool | None = None
     latency_ms: float = 0.0
     cost_tokens: int = 0
+    tokens_prompt: int = 0
+    tokens_completion: int = 0
+    cost_usd: float = 0.0
+    baseline_cost_usd: float = 0.0
+    savings_usd: float = 0.0
     hallucination_signal: float = 0.0
     downstream_success: str | None = None
     timestamp: float = field(default_factory=time.time)

@@ -90,7 +90,21 @@ def _safety_multiplier(
     return 1.0
 
 
-def compute_expected_utility(
+def _price_score(models: Iterable[ModelCapability]) -> float:
+    """Score for model cheapness (0.0-1.0). 1.0 = free/very cheap."""
+    prices = []
+    for model in models:
+        # GPT-4o reference price is ~$5/1M tokens
+        price = (model.input_price_per_1m + model.output_price_per_1m) / 2.0
+        prices.append(price)
+    if not prices:
+        return 0.8
+    avg_price = sum(prices) / len(prices)
+    # Score 1.0 for free, ~0.5 for $2.5/1M, ~0.1 for $25/1M
+    return 1.0 / (1.0 + avg_price / 2.5)
+
+
+async def compute_expected_utility(
     slot: ProviderSlot,
     profile: WorkloadProfile,
     capability_matrix: CapabilityMatrix | None,
@@ -109,14 +123,32 @@ def compute_expected_utility(
     quality = _quality_score(provider_models)
     schema = _schema_success_prob(provider_models, directive)
     latency = _latency_score(slot.latency_p95_ms)
-    cost = budget.get_budget_score(slot.provider.name)
+    
+    # Handle both sync and async budget forecasters
+    import inspect
+    cost_res = budget.get_budget_score(slot.provider.name)
+    if inspect.isawaitable(cost_res):
+        cost = await cost_res
+    else:
+        cost = cost_res
+        
+    price = _price_score(provider_models)
     safety = _safety_multiplier(profile, provider_models)
     policy_weight = directive.policy_weight if directive else 1.0
 
-    return success_prob * quality * schema * latency * cost * safety * policy_weight
+    return (
+        success_prob
+        * quality
+        * schema
+        * latency
+        * cost
+        * price
+        * safety
+        * policy_weight
+    )
 
 
-def compute_composite_score(
+async def compute_composite_score(
     provider_name: str,
     task_family: str,
     circuit_breaker: CircuitBreaker,
@@ -128,6 +160,14 @@ def compute_composite_score(
     circuit = circuit_breaker.get_score()
     if circuit == 0.0:
         return 0.0
-    budget_score = budget.get_budget_score(provider_name)
+        
+    # Handle both sync and async budget forecasters
+    import inspect
+    budget_res = budget.get_budget_score(provider_name)
+    if inspect.isawaitable(budget_res):
+        budget_score = await budget_res
+    else:
+        budget_score = budget_res
+        
     latency = compute_latency_score(latency_p95_ms)
     return capability * circuit * budget_score * latency

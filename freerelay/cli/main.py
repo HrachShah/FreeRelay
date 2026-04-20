@@ -18,12 +18,14 @@ from rich.prompt import Prompt
 from freerelay.config.settings import get_settings
 from freerelay.core.models.openai import ChatCompletionRequest, Message
 from freerelay.core.routing.factory import create_routing_engine
+from freerelay.cli.commands.user import user_app
 
 app = typer.Typer(
     name="freerelay",
     help="FreeRelay - AI gateway. Run freerelay to start!",
     add_completion=False,
 )
+app.add_typer(user_app, name="user")
 console = Console()
 
 
@@ -341,12 +343,10 @@ def setup() -> None:
     console.print("[green]Setup complete! Run [bold]freerelay[/bold] to start.[/green]")
 
 
-# Default command - just run "freerelay" without any subcommand
-@app.command()
+# CLI Entry Point
 def main() -> None:
-    """Start FreeRelay (default command)."""
-    start(port=8000, demo=False)
+    app()
 
 
 if __name__ == "__main__":
-    app()
+    main()
