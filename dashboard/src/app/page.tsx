@@ -200,7 +200,7 @@ export default function DashboardPage() {
                 <DollarSign className="h-5 w-5 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-900">${data?.total_spend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-3xl font-bold text-blue-900">${(data?.total_spend || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 <div className="mt-1 flex items-center text-sm font-medium text-blue-600">
                   <span>Net spend across all providers</span>
                 </div>
@@ -213,10 +213,10 @@ export default function DashboardPage() {
                 <Zap className="h-5 w-5 text-green-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-900">${data?.total_savings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-3xl font-bold text-green-900">${(data?.total_savings || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 <div className="mt-1 flex items-center text-sm font-medium text-green-600">
                   <ArrowUp className="mr-1 h-4 w-4" />
-                  <span>{data?.savings_percentage.toFixed(1)}% extra ROI</span>
+                  <span>{(data?.savings_percentage || 0).toFixed(1)}% extra ROI</span>
                 </div>
               </CardContent>
               <div className="absolute bottom-0 left-0 h-1 w-full bg-green-600" />
@@ -267,7 +267,7 @@ export default function DashboardPage() {
               </CardContent>
               <CardFooter className="flex-col items-start gap-2 text-sm">
                 <div className="flex items-center gap-2 font-bold text-lg text-green-600">
-                  ROI is tracking at {data?.savings_percentage.toFixed(1)}%
+                  ROI is tracking at {(data?.savings_percentage || 0).toFixed(1)}%
                 </div>
                 <div className="leading-none text-muted-foreground font-medium">
                   FreeRelay is reducing your LLM API costs through intelligent model routing and provider fallback.

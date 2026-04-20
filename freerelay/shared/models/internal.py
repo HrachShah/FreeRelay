@@ -360,6 +360,12 @@ class DailySavings(BaseModel):
     savings: float
 
 
+class ReliabilityEvent(BaseModel):
+    name: str
+    count: int
+    resolution: str
+
+
 class UsageAnalytics(BaseModel):
     total_spend: float
     total_savings: float
@@ -367,4 +373,5 @@ class UsageAnalytics(BaseModel):
     savings_percentage: float
     top_models: list[ModelUsage]
     daily_trends: list[DailySavings]
+    reliability_events: list[ReliabilityEvent] = Field(default_factory=list)
     projected_monthly_savings: float
