@@ -1,5 +1,16 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# FreeRelay Dashboard - Agent Guidelines
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+## Focus Areas
+- **UI/UX Consistency**: Use Shadcn UI components for all dashboard elements.
+- **ROI Visualization**: Prioritize "Savings Over Time" and "Cost Breakdown" (Actual vs Baseline).
+- **Security**: Ensure API keys and user data are handled securely (WIP Supabase integration).
+
+## Key Components
+- `DashboardPage`: Main view showing total spend, tokens, and savings.
+- `ApiKeysPage`: Management interface for user access tokens.
+- `LoginPage`: Authentication entry point (WIP).
+
+## Tech Stack Guidelines
+- Use `lucide-react` for icons.
+- Use `recharts` for all data visualizations.
+- Ensure all pages are responsive (mobile-first).
