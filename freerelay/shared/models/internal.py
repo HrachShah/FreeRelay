@@ -341,3 +341,30 @@ class ConversationState(BaseModel):
     decisions_made: list[dict[str, Any]] = Field(default_factory=list)
     context_version: int = 0
     last_updated_ts: float = Field(default_factory=time.time)
+
+
+# ─── Analytics ──────────────────────────────────────────────────────────────
+
+class ModelUsage(BaseModel):
+    model: str
+    tokens: int
+    cost: float
+    savings: float
+    percentage: float
+
+
+class DailySavings(BaseModel):
+    day: str
+    actual: float
+    baseline: float
+    savings: float
+
+
+class UsageAnalytics(BaseModel):
+    total_spend: float
+    total_savings: float
+    total_tokens: int
+    savings_percentage: float
+    top_models: list[ModelUsage]
+    daily_trends: list[DailySavings]
+    projected_monthly_savings: float

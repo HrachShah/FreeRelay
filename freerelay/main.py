@@ -259,6 +259,19 @@ def create_app() -> FastAPI:
             "timestamp": int(time.time()),
         }
 
+    @app.get("/v1/analytics")
+    async def analytics(request: Request, days: int = 7) -> Any:
+        from freerelay.observability.analytics import get_usage_analytics
+        
+        org_id = getattr(request.state, "org_id", None)
+        # If no org_id, check if user_id is present (for personal accounts)
+        user_id = getattr(request.state, "user_id", None)
+        
+        # For MVP, we'll just use org_id if it exists, else user_id
+        # The analytics logic uses this to filter logs.
+        
+        return get_usage_analytics(org_id or user_id, days=days)
+
     # ── Auth & Billing ───────────────────────────────────────────
 
     @app.post("/v1/auth/register", response_model=None)
