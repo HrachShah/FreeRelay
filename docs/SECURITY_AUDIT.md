@@ -38,7 +38,22 @@ The FreeRelay platform implements core security features like API key hashing an
 *   **Finding**: A signed audit system exists but isn't used in the request middleware.
 *   **Recommendation**: Replace basic `AuditMiddleware` with the signed `AuditLogger` for tamper-evident logs.
 
-### 5. Multi-tenant Isolation in Analytics/Requests
-**File**: `freerelay/main.py`
+### 5. Inconsistent Tenancy Filtering & Data Leak Risk (High Risk)
+**File**: `freerelay/observability/analytics.py`, `freerelay/main.py`
 
-*   **Audit Status**: **Blocked**. Code for `/v1/analytics` and `/v1/requests` was not present in the repository at the time of audit.
+*   **Finding**: The `/v1/analytics` endpoint passes `user_id` to `get_usage_analytics`, which then queries the `org_id` column in the database.
+*   **Vulnerability**: 
+    1. **Data Inaccessibility**: Users cannot see their own data because it's stored under `user_id` but queried via `org_id`.
+    2. **Data Leak**: If the `org_id` parameter is missing or null, the query falls back to `WHERE (org_id IS NULL OR org_id = '')`. This returns ALL records without an organization ID, potentially leaking usage data from multiple users to any authenticated requester who lacks an `org_id` in their profile.
+*   **Severity**: High
+*   **Recommendation**: 
+    1. Standardize on either `user_id` or `org_id` across the entire stack (Auth, Logging, Analytics).
+    2. Ensure that `get_usage_analytics` NEVER falls back to returning all records if the ID is missing; it should return an empty set or raise an error.
+
+### 6. SQL Injection Vulnerability (High Risk)
+**File**: `freerelay/observability/analytics.py`
+
+*   **Finding**: Database queries are constructed using f-strings and executed via `subprocess.run(["team-db", query], ...)`.
+*   **Vulnerability**: **SQL Injection**. While the `org_id` currently comes from the authenticated request state, any future change that allows user-supplied filters (e.g., custom date ranges or model filters) will be vulnerable to SQL injection because parameters are not bound or escaped.
+*   **Severity**: High
+*   **Recommendation**: Use a proper ORM or a database driver that supports parameterized queries. Avoid executing SQL via shell commands.

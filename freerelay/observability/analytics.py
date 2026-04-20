@@ -10,9 +10,17 @@ def run_query(query: str):
         raise Exception(f"Database query failed: {result.stderr}")
     return json.loads(result.stdout)
 
-def get_usage_analytics(org_id: Optional[str] = None, days: int = 7) -> UsageAnalytics:
-    # Filter by org_id if provided
-    base_filter = f"org_id = '{org_id}'" if org_id else "(org_id IS NULL OR org_id = '')"
+def get_usage_analytics(user_id: str, days: int = 7) -> UsageAnalytics:
+    # Strict filter by user_id
+    if not user_id:
+        # Return empty stats if no user_id
+        return UsageAnalytics(
+            total_spend=0, total_savings=0, total_tokens=0,
+            savings_percentage=0, top_models=[], daily_trends=[],
+            projected_monthly_savings=0
+        )
+        
+    base_filter = f"user_id = '{user_id}'"
     
     # Add time filter
     time_filter = f"created_at >= datetime('now', '-{days} days')"
