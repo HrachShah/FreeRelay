@@ -284,23 +284,23 @@ def create_app() -> FastAPI:
 
         try:
             supabase = get_supabase_admin_client()
-            # 1. Create user (or find)
-            user_res = (
-                supabase.table("users")
-                .upsert({"email": req.email}, on_conflict="email")
-                .execute()
-            )
-            if not user_res.data:
-                # If upsert didn't return data, try to fetch the user
+            # 1. Create user (Strict insert to prevent account hijacking)
+            try:
                 user_res = (
                     supabase.table("users")
-                    .select("id")
-                    .eq("email", req.email)
+                    .insert({"email": req.email})
                     .execute()
                 )
-            
-            user_data: Any = user_res.data[0]
-            user_id = str(user_data["id"])
+                user_data: Any = user_res.data[0]
+                user_id = str(user_data["id"])
+            except Exception:
+                # User probably exists. In a production system, we would 
+                # trigger an email verification or login flow here.
+                # For security, we DO NOT return a new key for an existing email.
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "User with this email already exists. Please log in."},
+                )  # type: ignore
 
             # 2. Store hashed key
             supabase.table("api_keys").insert(

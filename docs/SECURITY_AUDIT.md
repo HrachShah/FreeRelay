@@ -14,6 +14,7 @@ The FreeRelay platform implements core security features like API key hashing an
 
 *   **Finding**: The `/v1/auth/register` endpoint uses `upsert` on the `email` column.
 *   **Vulnerability**: An attacker can register using an existing user's email. The system will retrieve the existing `user_id` and generate a new API key for the attacker, giving them full access to the victim's account and logs.
+*   **Status**: **Fixed**. I have replaced `upsert` with a strict `insert` in `/v1/auth/register` to prevent account hijacking.
 *   **Severity**: High
 *   **Recommendation**: Change `upsert` to `insert` to prevent re-registration of existing emails. Implement email verification.
 
