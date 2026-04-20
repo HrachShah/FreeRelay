@@ -51,6 +51,7 @@ class RoutingDirective:
     require_hedging: str | None = None
     human_gate: bool = False
     policy_weight: float = 1.0
+    routing_preference: str = "balanced"
 
 
 @dataclass
@@ -84,6 +85,7 @@ class RoutingRule:
             require_hedging=self.require_hedging,
             human_gate=self.human_gate,
             policy_weight=self.policy_weight,
+            routing_preference="balanced",  # Default, can be overridden by rule if we want
         )
 
 
@@ -149,19 +151,25 @@ class RoutingPolicy:
         available_providers: list[str],
     ) -> tuple[list[str], RoutingDirective]:
         """Reorder providers and surface the matching directive."""
+        tenant_pref = context.get("tenant", {}).get("routing_preference", "balanced")
+        
         for rule in self.rules:
             if self._eval_condition(rule.condition, context):
                 directive = rule.directive
+                directive.routing_preference = tenant_pref # Apply tenant preference
                 logger.info(
-                    "Routing rule %s matched → %s",
+                    "Routing rule %s matched → %s (pref: %s)",
                     rule.name,
                     ", ".join(directive.prefer or ["(no prefer)"]),
+                    tenant_pref,
                 )
                 ordered = self._reorder_providers(
                     available_providers, directive.prefer, directive.exclude
                 )
                 return ordered, directive
-        return available_providers, RoutingDirective()
+        
+        default_directive = RoutingDirective(routing_preference=tenant_pref)
+        return available_providers, default_directive
 
     def _eval_condition(self, condition: str, context: dict[str, Any]) -> bool:
         return _eval_condition_context(condition, context)

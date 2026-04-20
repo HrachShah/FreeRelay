@@ -113,7 +113,20 @@ def compute_expected_utility(
     safety = _safety_multiplier(profile, provider_models)
     policy_weight = directive.policy_weight if directive else 1.0
 
-    return success_prob * quality * schema * latency * cost * safety * policy_weight
+    # Adjust weights based on routing preference
+    pref = directive.routing_preference if directive else "balanced"
+    if pref == "cost-optimized":
+        # Square cost to make it more dominant, root latency and quality
+        cost = cost**1.5
+        latency = latency**0.5
+        quality = quality**0.5
+    elif pref == "performance-first":
+        # Square latency and quality, root cost
+        latency = latency**1.5
+        quality = quality**1.5
+        cost = cost**0.5
+
+    return success_prob * quality * latency * cost * safety * policy_weight * schema
 
 
 def compute_composite_score(

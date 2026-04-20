@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT UNIQUE NOT NULL,
     tier TEXT NOT NULL DEFAULT 'free', -- 'free', 'bronze', 'silver', 'gold'
+    routing_preference TEXT NOT NULL DEFAULT 'balanced', -- 'cost-optimized', 'balanced', 'performance-first'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

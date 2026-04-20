@@ -38,6 +38,8 @@ from freerelay.shared.models.internal import (
     CheckoutResponse,
     RegisterRequest,
     RegisterResponse,
+    TenantSettingsRequest,
+    TenantSettingsResponse,
 )
 
 logger = logging.getLogger("freerelay")
@@ -227,10 +229,11 @@ def create_app() -> FastAPI:
 
         user_id = getattr(request.state, "user_id", None)
         tier = getattr(request.state, "tier", "free")
+        routing_preference = getattr(request.state, "routing_preference", "balanced")
 
         if req.is_streaming():
             return StreamingResponse(
-                engine.route_stream(req, user_id=user_id, tier=tier),
+                engine.route_stream(req, user_id=user_id, tier=tier, routing_preference=routing_preference),
                 media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
@@ -239,7 +242,7 @@ def create_app() -> FastAPI:
                 },
             )
 
-        response = await engine.route(req, user_id=user_id, tier=tier)
+        response = await engine.route(req, user_id=user_id, tier=tier, routing_preference=routing_preference)
 
         if "error" in response.model_dump():
             return JSONResponse(
@@ -301,6 +304,68 @@ def create_app() -> FastAPI:
                 status_code=500,
                 content={"error": f"Registration failed: {str(e)}"},
             )  # type: ignore
+
+    @app.post("/v1/tenant/settings", response_model=TenantSettingsResponse)
+    async def update_tenant_settings(
+        request: Request,
+        settings_req: TenantSettingsRequest
+    ) -> TenantSettingsResponse:
+        from freerelay.shared.tenancy.supabase import get_supabase_admin_client
+        
+        user_id = getattr(request.state, "user_id", None)
+        if not user_id or user_id == "admin":
+            return JSONResponse(
+                status_code=401,
+                content={"error": "Authentication required to update settings"}
+            ) # type: ignore
+            
+        if settings_req.routing_preference not in ["cost-optimized", "balanced", "performance-first"]:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Invalid routing preference. Must be 'cost-optimized', 'balanced', or 'performance-first'"}
+            ) # type: ignore
+
+        try:
+            supabase = get_supabase_admin_client()
+            supabase.table("users").update(
+                {"routing_preference": settings_req.routing_preference}
+            ).eq("id", user_id).execute()
+            
+            return TenantSettingsResponse(
+                success=True,
+                routing_preference=settings_req.routing_preference
+            )
+        except Exception as e:
+            logger.exception("Failed to update tenant settings")
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"Failed to update settings: {str(e)}"}
+            ) # type: ignore
+
+    @app.get("/v1/tenant/settings", response_model=TenantSettingsResponse)
+    async def get_tenant_settings(request: Request) -> TenantSettingsResponse:
+        from freerelay.shared.tenancy.supabase import get_supabase_client
+        
+        user_id = getattr(request.state, "user_id", None)
+        if not user_id or user_id == "admin":
+            return JSONResponse(
+                status_code=401,
+                content={"error": "Authentication required"}
+            ) # type: ignore
+            
+        try:
+            supabase = get_supabase_client()
+            result = supabase.table("users").select("routing_preference").eq("id", user_id).execute()
+            if result.data:
+                pref = result.data[0].get("routing_preference", "balanced")
+                return TenantSettingsResponse(success=True, routing_preference=pref)
+            return TenantSettingsResponse(success=False, routing_preference="balanced")
+        except Exception as e:
+            logger.exception("Failed to fetch tenant settings")
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"Failed to fetch settings: {str(e)}"}
+            ) # type: ignore
 
     @app.post("/v1/billing/checkout", response_model=None)
     async def billing_checkout(req: CheckoutRequest) -> CheckoutResponse:

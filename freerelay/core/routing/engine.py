@@ -92,12 +92,17 @@ class RequestContext:
     total_tokens: int
     schema_success_ratio: float
     tenant_tier: str
+    routing_preference: str = "balanced"
     policy_directive: RoutingDirective = field(default_factory=RoutingDirective)
 
     def policy_context(self) -> dict[str, Any]:
         return {
             "workload": self.workload_profile.to_dict(),
-            "tenant": {"id": self.user_id, "tier": self.tenant_tier},
+            "tenant": {
+                "id": self.user_id,
+                "tier": self.tenant_tier,
+                "routing_preference": self.routing_preference
+            },
             "schema": {"success_ratio": self.schema_success_ratio},
             "compression": {
                 "tokens_saved": self.compression.tokens_saved,
@@ -206,6 +211,7 @@ class RoutingEngine:
         request: ChatCompletionRequest,
         user_id: str | None = None,
         tier: str = "free",
+        routing_preference: str = "balanced",
     ) -> RequestContext:
         profile = self.profiler.profile(request)
         bundle = self.context_optimizer.optimize(request)
@@ -221,6 +227,7 @@ class RoutingEngine:
             total_tokens=bundle.total_tokens,
             schema_success_ratio=0.95,
             tenant_tier=tier,
+            routing_preference=routing_preference,
         )
 
     def _build_policy_context(self, context: RequestContext) -> dict[str, Any]:
@@ -334,8 +341,11 @@ class RoutingEngine:
         request: ChatCompletionRequest,
         user_id: str | None = None,
         tier: str = "free",
+        routing_preference: str = "balanced",
     ) -> ChatCompletionResponse:
-        context = self._prepare_context(request, user_id=user_id, tier=tier)
+        context = self._prepare_context(
+            request, user_id=user_id, tier=tier, routing_preference=routing_preference
+        )
         ranked, directive = await self._ranked_slots(context)
 
         if not ranked:
@@ -439,8 +449,11 @@ class RoutingEngine:
         request: ChatCompletionRequest,
         user_id: str | None = None,
         tier: str = "free",
+        routing_preference: str = "balanced",
     ) -> Any:
-        context = self._prepare_context(request, user_id=user_id, tier=tier)
+        context = self._prepare_context(
+            request, user_id=user_id, tier=tier, routing_preference=routing_preference
+        )
         ranked, _ = await self._ranked_slots(context)
 
         if not ranked:
