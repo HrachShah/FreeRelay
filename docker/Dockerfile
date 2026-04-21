@@ -13,7 +13,7 @@ COPY freerelay/ freerelay/
 COPY README.md .
 COPY dashboard/ dashboard/
 
-RUN pip install --no-cache-dir --prefix=/install .
+RUN pip install --no-cache-dir --prefix=/install ".[all]"
 
 # ── Runtime ──────────────────────────────────────
 FROM python:3.12-slim
