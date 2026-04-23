@@ -7,6 +7,7 @@ validation/repair loops, and outcome feedback logging.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 import uuid
@@ -440,6 +441,8 @@ class RoutingEngine:
         user_id: str | None = None,
         tier: str = "free",
     ) -> Any:
+        import json
+
         context = self._prepare_context(request, user_id=user_id, tier=tier)
         ranked, _ = await self._ranked_slots(context)
 
@@ -467,7 +470,6 @@ class RoutingEngine:
                         data_str = line[6:].strip()
                         if data_str and data_str != "[DONE]":
                             try:
-                                import json
                                 chunk = json.loads(data_str)
                                 if "choices" in chunk and chunk["choices"]:
                                     delta = chunk["choices"][0].get("delta", {})
