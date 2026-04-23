@@ -290,27 +290,19 @@ class ExperimentManager:
         """Record a single outcome for an experiment arm."""
         m_key = f"{METRICS_KEY_PREFIX}:{experiment_id}:{arm}"
         try:
-            # Use HINCRBY for integer counters, HSET for floats
+            # Use HINCRBY for counters, HINCRBYFLOAT for accumulators
             pipe = self._redis.pipeline()
             pipe.hincrby(m_key, "total_requests", 1)
             if success:
                 pipe.hincrby(m_key, "success_count", 1)
+            pipe.hincrbyfloat(m_key, "total_quality", quality)
+            pipe.hincrbyfloat(m_key, "total_latency_ms", latency_ms)
+            pipe.hincrbyfloat(m_key, "total_cost", cost)
+            await pipe.execute()
 
-            # For floats, read-modify-write
+            # Read current totals for rollback check
             data = await self._redis.hgetall(m_key)
-            total_requests = int(data.get("total_requests", 0)) + 1
-            total_quality = float(data.get("total_quality", 0)) + quality
-            total_latency = float(data.get("total_latency_ms", 0)) + latency_ms
-            total_cost = float(data.get("total_cost", 0)) + cost
-
-            await self._redis.hset(
-                m_key,
-                mapping={
-                    "total_quality": str(total_quality),
-                    "total_latency_ms": str(total_latency),
-                    "total_cost": str(total_cost),
-                },
-            )
+            total_requests = int(data.get("total_requests", 0))
 
             # Check canary auto-rollback
             config = await self.get_experiment(experiment_id)
@@ -321,6 +313,7 @@ class ExperimentManager:
                 and arm == "B"
             ):
                 if total_requests >= CANARY_MIN_SAMPLES:
+                    total_quality = float(data.get("total_quality", 0))
                     mean_q = total_quality / total_requests
                     if mean_q < config.quality_threshold:
                         await self.stop_experiment(
