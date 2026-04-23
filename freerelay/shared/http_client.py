@@ -44,7 +44,7 @@ def get_client() -> httpx.AsyncClient:
                 keepalive_expiry=_KEEPALIVE_EXPIRY,
             ),
             http2=_HTTP2,
-            follow_redirects=True,
+            follow_redirects=False,
         )
         logger.info(
             "HTTP client initialized: max_conn=%d, keepalive=%d, http2=%s",
