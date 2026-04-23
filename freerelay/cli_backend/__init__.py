@@ -101,6 +101,12 @@ def _sanitize_env(backend_name: str = "") -> dict[str, str]:
     for key in _SENSITIVE_ENV_VARS:
         env.pop(key, None)
 
+    # Restore backend-specific tokens if they were originally present
+    backend_tokens = _BACKEND_ENV_VARS.get(backend_name, [])
+    for key in backend_tokens:
+        if key in os.environ:
+            env[key] = os.environ[key]
+
     return env
 
 

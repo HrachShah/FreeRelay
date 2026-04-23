@@ -7,6 +7,8 @@ from freerelay.config.settings import get_settings
 
 def create_checkout_session(customer_email: str, price_id: str) -> Any:
     settings = get_settings()
+    if not settings.stripe_secret_key:
+        raise ValueError("stripe_secret_key is not configured")
     stripe.api_key = settings.stripe_secret_key
     
     session = stripe.checkout.Session.create(
