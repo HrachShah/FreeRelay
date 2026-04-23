@@ -106,14 +106,15 @@ class BudgetForecaster:
         if remaining <= 0:
             return True
 
-        # Project consumption for the remaining time
+        if remaining < self.safety_margin:
+            return True
+
         if state.ewma_rate > 0:
             minutes_left = max(1, remaining / state.ewma_rate)
-            # If we'd run out within 15 minutes, flag it
-            if minutes_left < 15 and remaining < self.safety_margin:
+            if minutes_left < 15:
                 return True
 
-        return remaining < self.safety_margin
+        return False
 
     def get_stats(self, provider: str) -> dict[str, object]:
         """Budget stats for dashboard."""
