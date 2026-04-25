@@ -189,7 +189,7 @@ class WorkloadProfiler:
     def _infer_tool_dependence(self, request: ChatCompletionRequest) -> str:
         if request.tools:
             return "mandatory"
-        if any(msg.role == "tool" or msg.tool_calls for msg in request.messages):
+        if any(msg.tool_calls for msg in request.messages):
             return "optional"
         return "none"
 
