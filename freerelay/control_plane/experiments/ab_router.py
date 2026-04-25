@@ -290,20 +290,18 @@ class ExperimentManager:
         """Record a single outcome for an experiment arm."""
         m_key = f"{METRICS_KEY_PREFIX}:{experiment_id}:{arm}"
         try:
-            # Use HINCRBY for integer counters, HSET for floats
+            # Use a single pipeline for all writes, then read the updated totals
+            # for the rollback check to avoid a stale-read race between hget and hset.
             pipe = self._redis.pipeline()
             pipe.hincrby(m_key, "total_requests", 1)
             if success:
                 pipe.hincrby(m_key, "success_count", 1)
-
-            # For floats, read-modify-write
+            # Read current float accumulators before incrementing them
             data = await self._redis.hgetall(m_key)
-            total_requests = int(data.get("total_requests", 0)) + 1
             total_quality = float(data.get("total_quality", 0)) + quality
             total_latency = float(data.get("total_latency_ms", 0)) + latency_ms
             total_cost = float(data.get("total_cost", 0)) + cost
-
-            await self._redis.hset(
+            pipe.hset(
                 m_key,
                 mapping={
                     "total_quality": str(total_quality),
@@ -311,6 +309,7 @@ class ExperimentManager:
                     "total_cost": str(total_cost),
                 },
             )
+            await pipe.execute()
 
             # Check canary auto-rollback
             config = await self.get_experiment(experiment_id)
@@ -320,6 +319,11 @@ class ExperimentManager:
                 and config.auto_rollback
                 and arm == "B"
             ):
+                # Read total_requests from Redis directly so we see the already-
+                # incremented value from this same pipeline rather than the stale
+                # count that existed before we sent the hincrby.
+                new_total = await self._redis.hget(m_key, "total_requests")
+                total_requests = int(new_total) if new_total else 0
                 if total_requests >= CANARY_MIN_SAMPLES:
                     mean_q = total_quality / total_requests
                     if mean_q < config.quality_threshold:
