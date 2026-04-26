@@ -167,19 +167,19 @@ def compile_workflow(yaml_str: str) -> WorkflowDefinition:
             try:
                 kind = StepKind(kind_str)
             except ValueError:
-                kind = StepKind.INFERENCE
-
-            steps.append(
-                StepDefinition(
-                    step_id=raw_step["step_id"],
-                    kind=kind,
-                    strategy=raw_step.get("strategy", "single"),
-                    depends_on=raw_step.get("depends_on", []),
-                    condition=raw_step.get("condition"),
-                    params=raw_step.get("params", {}),
-                    timeout_ms=raw_step.get("timeout_ms", 30000),
+                logger.warning("Unknown step kind '%s' in workflow '%s', skipping", kind_str, data.get("name", "?"))
+            else:
+                steps.append(
+                    StepDefinition(
+                        step_id=raw_step["step_id"],
+                        kind=kind,
+                        strategy=raw_step.get("strategy", "single"),
+                        depends_on=raw_step.get("depends_on", []),
+                        condition=raw_step.get("condition"),
+                        params=raw_step.get("params", {}),
+                        timeout_ms=raw_step.get("timeout_ms", 30000),
+                    )
                 )
-            )
 
         return WorkflowDefinition(
             name=data.get("name", "unnamed"),
