@@ -122,19 +122,22 @@ class PromptCompressor:
         for msg in messages:
             content = msg.content
             if isinstance(content, str):
-                # Strip leading/trailing whitespace
                 stripped = content.strip()
-                # Collapse consecutive blank lines
                 collapsed = re.sub(r"\n{3,}", "\n\n", stripped)
                 if stripped != content or collapsed != stripped:
                     changed = True
 
                 if not collapsed:
-                    continue  # Remove empty messages
-                cleaned.append(msg.model_copy(update={"content": collapsed}))
+                    continue
+                updated = msg.model_copy(update={"content": collapsed})
+            elif content is not None:
+                updated = msg
             else:
-                if content is not None:
-                    cleaned.append(msg)
+                continue
+
+            cleaned.append(updated)
+            if updated is not msg:
+                changed = True
 
         return cleaned, changed
 

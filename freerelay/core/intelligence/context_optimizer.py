@@ -83,6 +83,6 @@ class ContextOptimizer:
         for idx, msg in enumerate(messages):
             content = msg.content if isinstance(msg.content, str) else ""
             token_estimate = max(1, len(content) // 4)
-            scores.append((token_estimate, idx))
+            scores.append((token_estimate, -idx))
         scores.sort(key=lambda x: (-x[0], x[1]))
         return [idx for _, idx in scores]
