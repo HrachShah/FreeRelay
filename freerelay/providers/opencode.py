@@ -169,14 +169,8 @@ async def fetch_opencode_models(api_key: str = "") -> list[dict[str, str]]:
     except Exception:
         pass
 
-    # Fallback: return known free model
-    return [
-        {
-            "id": "mimo-v2-pro-free",
-            "name": "MiMo v2 Pro (Free)",
-            "free": True,
-        }
-    ]
+    # Fallback: return all known free models
+    return get_known_free_models()
 
 
 def get_known_free_models() -> list[dict[str, str]]:
