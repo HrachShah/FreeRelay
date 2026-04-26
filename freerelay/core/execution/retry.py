@@ -28,7 +28,6 @@ async def retry_with_backoff[T](
 ) -> T:
     """
     Retry an async function with exponential backoff and optional jitter.
-
     Args:
         func: Async callable to retry.
         max_retries: Maximum number of retry attempts.
@@ -36,13 +35,14 @@ async def retry_with_backoff[T](
         max_delay: Maximum delay in seconds.
         jitter: Add random jitter to prevent thundering herd.
         retryable_exceptions: Tuple of exception types that trigger retry.
-
     Returns:
         Result of the function call.
-
     Raises:
         Exception: The last exception if all retries fail.
     """
+    if max_retries < 0:
+        raise ValueError(f"max_retries must be >= 0, got {max_retries}")
+
     last_error: Exception | None = None
 
     for attempt in range(max_retries + 1):
@@ -66,7 +66,9 @@ async def retry_with_backoff[T](
             )
             await asyncio.sleep(delay)
 
-    raise last_error or RuntimeError("All retries exhausted")
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("All retries exhausted (last_error was never set)")
 
 
 def calculate_backoff(
