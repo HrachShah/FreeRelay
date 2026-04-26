@@ -162,8 +162,6 @@ def classify_task_family(
     if request.tools:
         return "tool_use", 0.95
 
-    request.get_content_text().lower()
-
     # Check system prompt separately for higher weight
     system_text = ""
     user_text = ""
