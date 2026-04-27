@@ -92,10 +92,10 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         # Execute the request
         response = await call_next(request)
 
-        # Cache the response for idempotent replays
-        # Note: We can't easily read the response body from a StreamingResponse
-        # so we only cache JSON responses
-        if hasattr(response, "body"):
+        # Cache the response for idempotent replays.
+        # Only JSONResponse has a readable body attribute; StreamingResponse
+        # and other types raise AttributeError when .body is accessed.
+        if isinstance(response, JSONResponse):
             try:
                 body = json.loads(response.body.decode())  # type: ignore[union-attr]
                 # Evict oldest entry if at capacity
