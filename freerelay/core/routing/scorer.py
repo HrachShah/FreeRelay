@@ -72,6 +72,8 @@ def _schema_success_prob(
 
 
 def _latency_score(latency_p95_ms: float) -> float:
+    if latency_p95_ms <= 0:
+        return 1.0
     return 1.0 / (1.0 + latency_p95_ms / 1000.0)
 
 
