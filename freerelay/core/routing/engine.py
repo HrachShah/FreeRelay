@@ -280,19 +280,15 @@ class RoutingEngine:
             if self.budget.is_budget_exhausted(slot.provider.name):
                 continue
 
-            # In auto mode, filter by tier preference
-            # If we have paid providers and this is a complex task, prefer paid
-            # Otherwise, prefer free
+            # In auto mode, filter by tier preference.
+            # Slots matching preferred tier go to the front; others serve as fallback.
             if has_paid:
-                if slot.tier == preferred_tier or (
-                    preferred_tier == "paid" and slot.tier == "paid"
-                ):
+                if slot.tier == preferred_tier:
                     available.insert(0, slot)  # Higher priority
-                elif slot.tier == "free":
+                else:
                     available.append(slot)  # Fallback
             else:
                 available.append(slot)
-
             candidate_names.append(slot.provider.name)
 
         policy_order, directive = self.routing_policy.apply(
