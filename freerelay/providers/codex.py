@@ -226,7 +226,7 @@ def get_codex_token_status() -> dict[str, object]:
         import base64
 
         parts = token.split(".")
-        if len(parts) == 2:
+        if len(parts) == 3:
             payload_b64 = parts[1] + "=" * (4 - len(parts[1]) % 4)
             payload = json.loads(base64.urlsafe_b64decode(payload_b64).decode("utf-8"))
             exp = payload.get("exp", 0)
