@@ -135,7 +135,10 @@ class SemanticCache:
                 return ChatCompletionResponse.model_validate_json(entry.response_json)
             except Exception:
                 del self._entries[key]
-                return None
+                if self._lsh is not None:
+                    with contextlib.suppress(KeyError):
+                        self._lsh.remove(key)
+                return None  # Corrupt entry — don't fall through to LSH
 
         # Semantic match via LSH
         if self._lsh is not None:
