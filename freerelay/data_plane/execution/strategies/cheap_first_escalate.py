@@ -65,11 +65,17 @@ async def execute(
         # Execute with cheapest
         if hasattr(router, "route"):
             response = await router.route(request)
-            content = ""
-            tokens = 0
-            if response.choices:
-                content = response.choices[0].message.content or ""
-            tokens = response.usage.total_tokens if response.usage else 0
+            if response is None:
+                content = ""
+                tokens = 0
+            else:
+                content = ""
+                tokens = 0
+                if hasattr(response, "choices") and response.choices:
+                    if response.choices[0].message.content:
+                        content = response.choices[0].message.content
+                if hasattr(response, "usage") and response.usage and hasattr(response.usage, "total_tokens"):
+                    tokens = response.usage.total_tokens
         else:
             content = ""
             tokens = 0
