@@ -76,6 +76,12 @@ def _schema_prob(slot: ModelSlot, profile: WorkloadProfile) -> float:
     return 0.95  # Prose doesn't need schema compliance
 
 
+def _latency_score(latency_p95_ms: float) -> float:
+    if latency_p95_ms <= 0:
+        return 1.0
+    return 1.0 / (1.0 + latency_p95_ms / 1000.0)
+
+
 def _latency_utility(slot: ModelSlot, profile: WorkloadProfile) -> float:
     """Utility based on latency expectations."""
     if profile.latency_class == "interactive":
