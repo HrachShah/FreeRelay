@@ -24,13 +24,19 @@ from __future__ import annotations
 
 import asyncio
 import time
-from enum import StrEnum
+from enum import IntEnum
+
+try:
+    from freerelay.shared.observability.metrics import set_circuit_state
+    _METRICS_AVAILABLE = True
+except ImportError:
+    _METRICS_AVAILABLE = False
 
 
-class CircuitState(StrEnum):
-    CLOSED = "CLOSED"
-    OPEN = "OPEN"
-    HALF_OPEN = "HALF_OPEN"
+class CircuitState(IntEnum):
+    CLOSED = 0
+    HALF_OPEN = 1
+    OPEN = 2
 
 
 # HTTP status codes that count as provider failures
@@ -110,6 +116,8 @@ class CircuitBreaker:
             if current == CircuitState.HALF_OPEN:
                 self._state = CircuitState.CLOSED
                 self._failure_timestamps.clear()
+                if _METRICS_AVAILABLE:
+                    set_circuit_state(self.provider_name, CircuitState.CLOSED)
 
     async def record_failure(self, status_code: int | None = None) -> None:
         """
@@ -130,6 +138,8 @@ class CircuitBreaker:
                 # Probe failed → back to OPEN
                 self._state = CircuitState.OPEN
                 self._open_since = now
+                if _METRICS_AVAILABLE:
+                    set_circuit_state(self.provider_name, CircuitState.OPEN)
                 return
 
             # CLOSED state — track failures
@@ -144,6 +154,8 @@ class CircuitBreaker:
             if len(self._failure_timestamps) >= self.failure_threshold:
                 self._state = CircuitState.OPEN
                 self._open_since = now
+                if _METRICS_AVAILABLE:
+                    set_circuit_state(self.provider_name, CircuitState.OPEN)
 
     def get_score(self) -> float:
         """
