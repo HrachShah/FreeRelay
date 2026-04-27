@@ -55,7 +55,7 @@ def _load_token_from_file() -> str:
             if "access_token" in data:
                 expires_at = data.get("expires_at", 0)
                 if expires_at and expires_at < time.time():
-                    logger.warning("ChatGPT OAuth token in %s is expired", path.name)
+                    logger.warning("ChatGPT OAuth token in %s is expired", path)
                     continue
                 logger.info("Loaded ChatGPT OAuth token from %s", path)
                 return data["access_token"]
