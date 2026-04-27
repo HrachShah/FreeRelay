@@ -47,10 +47,23 @@ async def execute(
 
         model_pool = step.params.get("model_pool", [])
 
+        if not model_pool:
+            return StepOutput(
+                step_id=step.step_id,
+                status=StepStatus.FAILED,
+                error="Fanout strategy requires a non-empty model_pool",
+            )
+
         if isinstance(router, RoutingEngine) and profile is not None:
             top_n = router.select_top_n(profile, model_pool, n=n)
         else:
             top_n = [(step.params.get("provider", ""), step.params.get("model", ""))]
+        if not top_n:
+            return StepOutput(
+                step_id=step.step_id,
+                status=StepStatus.FAILED,
+                error="No providers available from router for fanout",
+            )
 
         # Fan out to all providers in parallel
         async def call_provider(provider: str, model: str) -> StepOutput:

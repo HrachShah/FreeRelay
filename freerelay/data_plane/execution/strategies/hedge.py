@@ -50,12 +50,19 @@ async def execute(
 
         model_pool = step.params.get("model_pool", [])
 
+        if not model_pool:
+            return StepOutput(
+                step_id=step.step_id,
+                status=StepStatus.FAILED,
+                error="Hedge strategy requires a non-empty model_pool",
+            )
+
         if isinstance(router, RoutingEngine) and profile is not None:
             top_2 = router.select_top_n(profile, model_pool, n=2)
         else:
             p = step.params.get("provider", "")
             m = step.params.get("model", "")
-            top_2 = [(p, m)]
+            top_2 = [(p, m)] if p else []
 
         if len(top_2) < 2:
             # Only one provider, use single strategy
