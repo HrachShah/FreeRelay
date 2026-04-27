@@ -29,7 +29,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
         # Only audit API routes
         if request.url.path.startswith("/v1/"):
             logger.info(
-                "audit",
+                "audit request",
                 extra={
                     "method": request.method,
                     "path": request.url.path,
