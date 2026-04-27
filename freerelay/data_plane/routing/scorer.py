@@ -136,7 +136,7 @@ def _ucb_bonus(
 
     Encourages trying under-explored providers.
     """
-    if slot_pulls == 0:
+    if slot_pulls <= 0:
         return _UCB_C * 2.0  # Max bonus for untried providers
     return _UCB_C * math.sqrt(math.log(max(1, total_pulls)) / slot_pulls)
 
