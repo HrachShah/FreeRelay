@@ -51,10 +51,26 @@ async def execute(
 
         model_pool = step.params.get("model_pool", [])
 
+        if not model_pool:
+            return StepOutput(
+                step_id=step.step_id,
+                status=StepStatus.FAILED,
+                error="Consensus strategy requires a non-empty model_pool",
+            )
+
         if isinstance(router, RoutingEngine) and profile is not None:
             top_n = router.select_top_n(profile, model_pool, n=n)
         else:
-            top_n = [(step.params.get("provider", ""), step.params.get("model", ""))]
+            p = step.params.get("provider", "")
+            m = step.params.get("model", "")
+            top_n = [(p, m)] if p else []
+
+        if not top_n:
+            return StepOutput(
+                step_id=step.step_id,
+                status=StepStatus.FAILED,
+                error="No providers available from router for consensus",
+            )
 
         # Fan out
         async def call_provider(provider: str, model: str) -> tuple[str, str, int]:
