@@ -74,9 +74,14 @@ def evaluate_json_schema(output: str, schema: dict[str, Any] | None) -> ScoreRes
         # Partial credit: valid JSON but wrong schema
         return ScoreResult(score=0.5, passed=False, details=details)
     except jsonschema.SchemaError as exc:
-        details["schema_error"] = str(exc)
+        # Schema itself is malformed — hard failure, not partial credit.
+        # A broken schema means the benchmark result is meaningless.
+        logger.error("Benchmark schema is invalid: %s", exc)
         return ScoreResult(
-            score=0.5, passed=False, details=details, error=f"Bad schema: {exc}"
+            score=0.0,
+            passed=False,
+            details={"schema_valid": False, "schema_error": str(exc)},
+            error=f"Invalid schema: {exc}",
         )
     except ImportError:
         # jsonschema not installed — just check parseability
