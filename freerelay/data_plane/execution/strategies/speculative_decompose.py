@@ -53,9 +53,11 @@ async def execute(
                 response = await router.route(request)
                 content = ""
                 tokens = 0
-                if response.choices:
-                    content = response.choices[0].message.content or ""
-                tokens = response.usage.total_tokens if response.usage else 0
+                if response is not None:
+                    if response.choices:
+                        content = response.choices[0].message.content or ""
+                    if response.usage:
+                        tokens = response.usage.total_tokens
             else:
                 content = ""
                 tokens = 0
@@ -89,8 +91,9 @@ async def execute(
                     max_tokens=1024,
                 )
                 response = await router.route(req)
-                if response.choices:
-                    return response.choices[0].message.content or ""
+                if response is not None:
+                    if response.choices:
+                        return response.choices[0].message.content or ""
             return ""
 
         tasks = [exec_subtask(st) for st in subtasks]
