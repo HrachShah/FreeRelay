@@ -154,6 +154,6 @@ async def _call_llm(router: Any, step: StepDefinition, prompt: str) -> str:
             max_tokens=step.params.get("max_tokens", 2048),
         )
         response = await router.route(req)
-        if response.choices:
+        if response is not None and response.choices:
             return response.choices[0].message.content or ""
     return ""
