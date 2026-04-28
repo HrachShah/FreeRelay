@@ -93,9 +93,13 @@ async def execute(
             response = await router.route(repair_request)
             repaired_content = ""
             tokens = 0
-            if response.choices:
-                repaired_content = response.choices[0].message.content or ""
-            tokens = response.usage.total_tokens if response.usage else 0
+            if response is not None:
+                if response.choices:
+                    repaired_content = response.choices[0].message.content or ""
+                tokens = response.usage.total_tokens if response.usage else 0
+            else:
+                repaired_content = original_content
+                tokens = 0
         else:
             repaired_content = original_content
             tokens = 0
