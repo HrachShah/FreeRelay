@@ -208,10 +208,17 @@ class PolicyDSL:
                 except ValueError:
                     logger.warning("Unknown operator: %s", op_str)
                     continue
+                if "field" not in cond_raw:
+                    logger.warning(
+                        "Policy %s condition is missing 'field' key: %s",
+                        name,
+                        cond_raw,
+                    )
+                    continue
                 conditions.append(Condition(
                     field=cond_raw["field"],
                     op=op,
-                    value=cond_raw["value"],
+                    value=cond_raw.get("value", ""),
                 ))
 
             action_raw = raw.get("action", {})
