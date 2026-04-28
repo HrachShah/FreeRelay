@@ -93,9 +93,8 @@ async def execute(
             response = await router.route(verify_request)
             verify_content = ""
             tokens = 0
-            if response is not None:
-                if response.choices:
-                    verify_content = response.choices[0].message.content or ""
+            if response is not None and response.choices and len(response.choices) > 0:
+                verify_content = response.choices[0].message.content or ""
                 tokens = response.usage.total_tokens if response.usage else 0
         else:
             # Heuristic verification when no LLM available
