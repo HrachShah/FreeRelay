@@ -67,7 +67,7 @@ async def execute(
         if len(top_2) < 2:
             # Only one provider, use single strategy
             provider, model = top_2[0] if top_2 else ("", "")
-            if hasattr(router, "route"):
+            if router and hasattr(router, "route"):
                 response = await router.route(request)
                 content = ""
                 tokens = 0
@@ -82,7 +82,6 @@ async def execute(
             return StepOutput(
                 step_id=step.step_id,
                 status=StepStatus.COMPLETED,
-                content=content,
                 provider=provider,
                 model=model,
                 latency_ms=(time.monotonic() - start) * 1000,

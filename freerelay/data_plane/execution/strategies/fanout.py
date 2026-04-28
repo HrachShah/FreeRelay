@@ -73,9 +73,10 @@ async def execute(
                     response = await router.route(request)
                     content = ""
                     tokens = 0
-                    if response.choices:
-                        content = response.choices[0].message.content or ""
-                    tokens = response.usage.total_tokens if response.usage else 0
+                    if response is not None:
+                        if response.choices:
+                            content = response.choices[0].message.content or ""
+                        tokens = response.usage.total_tokens if response.usage else 0
                     return StepOutput(
                         step_id=step.step_id,
                         status=StepStatus.COMPLETED,
