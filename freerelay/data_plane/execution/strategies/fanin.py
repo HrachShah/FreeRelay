@@ -100,9 +100,10 @@ async def execute(
                 response = await router.route(summarize_request)
                 merged_content = ""
                 total_tokens = 0
-                if response.choices:
-                    merged_content = response.choices[0].message.content or ""
-                total_tokens = response.usage.total_tokens if response.usage else 0
+                if response is not None:
+                    if response.choices:
+                        merged_content = response.choices[0].message.content or ""
+                    total_tokens = response.usage.total_tokens if response.usage else 0
             else:
                 merged_content = combined
                 total_tokens = sum(r.tokens_used for r in collected)
