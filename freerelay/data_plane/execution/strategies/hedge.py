@@ -64,9 +64,9 @@ async def execute(
                 response = await router.route(request)
                 content = ""
                 tokens = 0
-                if response.choices:
+                if response is not None and response.choices:
                     content = response.choices[0].message.content or ""
-                tokens = response.usage.total_tokens if response.usage else 0
+                tokens = response.usage.total_tokens if response is not None and response.usage else 0
             else:
                 content = ""
                 tokens = 0
@@ -86,28 +86,21 @@ async def execute(
 
         async def race_provider(provider: str, model: str) -> StepOutput:
             p_start = time.monotonic()
+            content = ""
+            tokens = 0
             if hasattr(router, "route"):
                 response = await router.route(request)
-                content = ""
-                tokens = 0
-                if response.choices:
+                if response is not None and response.choices:
                     content = response.choices[0].message.content or ""
-                tokens = response.usage.total_tokens if response.usage else 0
-                return StepOutput(
-                    step_id=step.step_id,
-                    status=StepStatus.COMPLETED,
-                    content=content,
-                    provider=provider,
-                    model=model,
-                    latency_ms=(time.monotonic() - p_start) * 1000,
-                    tokens_used=tokens,
-                )
+                tokens = response.usage.total_tokens if response is not None and response.usage else 0
             return StepOutput(
                 step_id=step.step_id,
                 status=StepStatus.COMPLETED,
+                content=content,
                 provider=provider,
                 model=model,
                 latency_ms=(time.monotonic() - p_start) * 1000,
+                tokens_used=tokens,
             )
 
         async def delayed_race(provider: str, model: str) -> StepOutput:

@@ -67,9 +67,9 @@ async def execute(
             response = await router.route(request)
             content = ""
             tokens = 0
-            if response.choices:
+            if response is not None and response.choices:
                 content = response.choices[0].message.content or ""
-            tokens = response.usage.total_tokens if response.usage else 0
+            tokens = response.usage.total_tokens if response is not None and response.usage else 0
         else:
             content = ""
             tokens = 0
@@ -100,9 +100,9 @@ async def execute(
             response2 = await router.route(request)
             content2 = ""
             tokens2 = 0
-            if response2.choices:
+            if response2 is not None and response2.choices:
                 content2 = response2.choices[0].message.content or ""
-            tokens2 = response2.usage.total_tokens if response2.usage else 0
+            tokens2 = response2.usage.total_tokens if response2 is not None and response2.usage else 0
         else:
             content2 = content
             tokens2 = tokens
