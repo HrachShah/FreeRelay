@@ -68,7 +68,7 @@ def _verify_token_supabase(token_hash: str) -> dict[str, str] | None:
             return user_info
         return None
     except Exception as e:
-        logger.error(f"Supabase auth error: {e}")
+        logger.error("Supabase auth error: %s", e)
         return None
 
 class AuthMiddleware(BaseHTTPMiddleware):
