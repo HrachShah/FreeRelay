@@ -70,9 +70,9 @@ async def execute(
 
         if hasattr(router, "route"):
             response = await router.route(request)
-            if response.choices:
+            if response is not None and response.choices:
                 content = response.choices[0].message.content or ""
-            tokens = response.usage.total_tokens if response.usage else 0
+            tokens = response.usage.total_tokens if response is not None and response.usage else 0
 
         elapsed_ms = (__import__("time").monotonic() - start_import) * 1000
 
