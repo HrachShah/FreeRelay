@@ -100,7 +100,8 @@ async def execute(
                 if response is not None:
                     if response.choices:
                         content = response.choices[0].message.content or ""
-                    tokens = response.usage.total_tokens if response.usage else 0
+                    if response.usage:
+                        tokens = response.usage.total_tokens
                 return StepOutput(
                     step_id=step.step_id,
                     status=StepStatus.COMPLETED,
