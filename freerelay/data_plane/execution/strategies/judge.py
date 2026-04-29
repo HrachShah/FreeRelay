@@ -121,9 +121,9 @@ async def execute(
             response = await router.route(judge_request)
             content = ""
             tokens = 0
-            if response.choices:
+            if response is not None and response.choices:
                 content = response.choices[0].message.content or ""
-            tokens = response.usage.total_tokens if response.usage else 0
+                tokens = response.usage.total_tokens if response.usage else 0
         else:
             content = "1"  # Default to first candidate
             tokens = 0
