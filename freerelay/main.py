@@ -353,7 +353,7 @@ def create_app() -> FastAPI:
                 supabase.table("users").update({"tier": "bronze"}).eq(
                     "email", email
                 ).execute()
-                logger.info(f"User {email} upgraded to bronze")
+                logger.info("User %s upgraded to bronze", email)
 
         return Response(status_code=200)
 
