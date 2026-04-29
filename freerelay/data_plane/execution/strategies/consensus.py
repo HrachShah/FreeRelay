@@ -80,11 +80,12 @@ async def execute(
                     return ("", provider, 0)
                 content = ""
                 tokens = 0
-                if hasattr(response, "choices") and response.choices:
-                    if response.choices[0].message.content:
-                        content = response.choices[0].message.content
-                    if hasattr(response, "usage") and response.usage and hasattr(response.usage, "total_tokens"):
-                        tokens = response.usage.total_tokens
+                if hasattr(response, "choices") and response.choices and len(response.choices) > 0:
+                    first = response.choices[0]
+                    if hasattr(first, "message") and first.message and hasattr(first.message, "content"):
+                        content = first.message.content or ""
+                    if hasattr(response, "usage") and response.usage:
+                        tokens = response.usage.total_tokens or 0
                 return (content, provider, tokens)
             return ("", provider, 0)
 
