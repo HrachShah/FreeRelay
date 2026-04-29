@@ -64,14 +64,17 @@ async def hedged_execute(
     # Check all done tasks for a successful result
     # done may contain 1 or 2 tasks (both completed before cancellation)
     errors: list[BaseException] = []
+    winner_exception = None
     for task in done:
-        if task.exception() is None:
+        exc = task.exception()
+        if exc is None:
             winner = tasks[task]
             logger.info("Hedged winner: %s", winner.name)
-            # Cancel any remaining done tasks that weren't checked yet
             return task.result()
-        errors.append(task.exception())  # type: ignore[arg-type]
+        winner_exception = exc
 
     # All done tasks failed
     logger.warning("All hedged providers failed (%d errors)", len(errors))
-    raise errors[0]
+    if winner_exception is not None:
+        raise winner_exception
+    raise RuntimeError("All hedged providers failed")
