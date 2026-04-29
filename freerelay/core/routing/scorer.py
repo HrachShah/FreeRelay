@@ -52,12 +52,8 @@ def compute_capability_score(
 
 def _quality_score(models: Iterable[ModelCapability]) -> float:
     tier_map = {"low": 0.6, "medium": 0.8, "high": 1.0}
-    values = []
-    for model in models:
-        values.append(tier_map.get(model.quality_tier, 0.75))
-    if not values:
-        return 0.7
-    return sum(values) / len(values)
+    values = [tier_map.get(model.quality_tier, 0.75) for model in models]
+    return sum(values) / len(values) if values else 0.7
 
 
 def _schema_success_prob(
