@@ -23,6 +23,9 @@ from freerelay.core.models.openai import (
     ChatCompletionResponse,
 )
 from freerelay.providers.base import BaseProvider, ProviderError, RateLimitError
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _is_free_model(model: str) -> bool:
@@ -166,8 +169,8 @@ async def fetch_opencode_models(api_key: str = "") -> list[dict[str, str]]:
                         }
                     )
             return models
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Failed to fetch OpenCode model catalog: %s", exc)
 
     # Fallback: return known free model
     return [
