@@ -143,6 +143,9 @@ class SemanticCache:
             if minhash is not None:
                 try:
                     results = self._lsh.query(minhash)
+                except Exception as exc:
+                    logger.warning("LSH query failed, skipping semantic matches: %s", exc)
+                else:
                     for result_key in results:
                         candidate = self._entries.get(result_key)
                         if (
@@ -155,8 +158,6 @@ class SemanticCache:
                                 )
                             except Exception:
                                 continue
-                except Exception:
-                    pass
 
         return None
 
