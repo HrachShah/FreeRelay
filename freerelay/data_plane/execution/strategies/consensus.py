@@ -84,6 +84,57 @@ async def execute(
                 error="All providers failed",
             )
 
+        # Need at least 2 responses to establish consensus — a single provider
+        # has no one to agree with, so skip straight to judge.
+        if len(successful) < 2:
+            from freerelay.data_plane.execution.strategies.judge import (
+                execute as judge_execute,
+            )
+
+            candidate_step_id = f"{step.step_id}_candidates"
+            await ctx.set(
+                candidate_step_id,
+                StepOutput(
+                    step_id=candidate_step_id,
+                    status=StepStatus.COMPLETED,
+                    metadata={
+                        "responses": [
+                            {"content": r[0], "provider": r[1]} for r in successful
+                        ],
+                    },
+                ),
+            )
+
+            judge_step = StepDefinition(
+                step_id=f"{step.step_id}_judge",
+                kind=step.kind,
+                strategy="judge",
+                params={
+                    "candidates_step": candidate_step_id,
+                    "rubric": step.params.get(
+                        "rubric", "Select the most accurate and complete response."
+                    ),
+                },
+            )
+
+            judge_output = await judge_execute(judge_step, ctx)
+            return StepOutput(
+                step_id=step.step_id,
+                status=StepStatus.COMPLETED,
+                content=judge_output.content,
+                provider=judge_output.provider,
+                model=judge_output.model,
+                latency_ms=(time.monotonic() - start) * 1000,
+                tokens_used=judge_output.tokens_used,
+                metadata={
+                    "consensus": False,
+                    "similarity": 1.0,
+                    "n_responded": len(successful),
+                    "judge_used": True,
+                    "single_provider": True,
+                },
+            )
+
         # Check pairwise similarity
         contents = [r[0] for r in successful]
         similarity = _pairwise_similarity(contents) if len(contents) >= 2 else 1.0
