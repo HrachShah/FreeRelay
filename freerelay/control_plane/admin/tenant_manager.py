@@ -136,16 +136,17 @@ class TenantManager:
             raise
 
     async def get_tenant(self, namespace: str) -> TenantPolicy | None:
-        """Retrieve a tenant policy by namespace."""
+        """Retrieve a tenant policy by namespace.
+
+        Returns None when the tenant does not exist. Raises exception
+        when the underlying store is unavailable so callers can
+        distinguish a missing tenant from a storage failure.
+        """
         key = f"{TENANT_KEY_PREFIX}:{namespace}"
-        try:
-            data = await self._redis.hgetall(key)
-            if not data:
-                return None
-            return TenantPolicy.from_redis(data)
-        except Exception:
-            logger.exception("get_tenant_error namespace=%s", namespace)
+        data = await self._redis.hgetall(key)
+        if not data:
             return None
+        return TenantPolicy.from_redis(data)
 
     async def update_tenant(self, namespace: str, updates: dict[str, Any]) -> bool:
         """
