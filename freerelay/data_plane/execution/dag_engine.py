@@ -187,9 +187,12 @@ def compile_workflow(yaml_str: str) -> WorkflowDefinition:
             global_timeout_ms=data.get("global_timeout_ms", 120000),
             metadata=data.get("metadata", {}),
         )
+    except yaml.YAMLError as e:
+        logger.error("YAML parse error in workflow: %s", e)
+        raise ValueError(f"Invalid workflow YAML: {e}") from e
     except Exception:
         logger.exception("Failed to compile workflow")
-        return WorkflowDefinition(name="error")
+        raise
 
 
 def _topological_sort(steps: list[StepDefinition]) -> list[list[StepDefinition]]:
