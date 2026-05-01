@@ -84,8 +84,10 @@ def classify_output_contract(
     for msg in request.messages:
         if msg.role == "system":
             content = (msg.content if isinstance(msg.content, str) else "").lower()
-            if "json" in content or "structured" in content:
+            if "json_object" in content or "structured output" in content:
                 return "json", 0.80
+            if "json" in content and ("schema" in content or "format" in content):
+                return "schema", 0.80
             if "code" in content or "patch" in content:
                 return "code_patch", 0.75
 
