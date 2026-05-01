@@ -125,9 +125,9 @@ def classify_intent(request: ChatCompletionRequest) -> str:
         "creative": creative_score,
     }
 
-    best = max(scores, key=scores.get)  # type: ignore[arg-type]
-    if scores[best] >= 2:
-        return best
+    best = max(scores, key=scores.get, default=None)  # type: ignore[arg-type]
+    if best is None or scores[best] < 2:
+        return "general"
 
     # Short messages with questions → simple chat
     if len(text) < 100:
