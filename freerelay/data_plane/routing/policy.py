@@ -65,7 +65,8 @@ class Condition:
             if op_func is None:
                 return False
             return op_func(actual, self.value)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Operator %s evaluation failed on %s: %s", self.op, self.field, exc)
             return False
 
     def _resolve_field(self, context: dict[str, Any], path: str) -> Any:
@@ -232,8 +233,8 @@ class PolicyDSL:
                 condition_mode=condition_mode,
                 action=action,
             )
-        except Exception:
-            logger.exception("Failed to parse policy: %s", raw)
+        except Exception as exc:
+            logger.exception("Failed to parse policy: %s: %s", raw, exc)
             return None
 
     def match_conditions(self, policy: Policy, context: dict[str, Any]) -> bool:

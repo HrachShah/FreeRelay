@@ -47,8 +47,9 @@ class MetricsBroadcaster:
         for client in self._clients:
             try:
                 await client.send_text(message)
-            except Exception:
+            except Exception as exc:
                 disconnected.append(client)
+                logger.debug("WebSocket send failed, scheduling disconnect: %s", exc)
 
         for client in disconnected:
             self._clients.remove(client)
