@@ -94,7 +94,7 @@ def create_app() -> FastAPI:
         from fastapi.responses import ORJSONResponse
 
         default_response_class: type[Response] = ORJSONResponse
-    except Exception:
+    except Exception as exc:
         default_response_class = JSONResponse
 
     app = FastAPI(
@@ -202,7 +202,7 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.body()
-        except Exception:
+        except Exception as exc:
             return JSONResponse(
                 status_code=400,
                 content=ChatCompletionResponse.error_body("Invalid JSON body", 400),
@@ -290,7 +290,7 @@ def create_app() -> FastAPI:
                 )
                 user_data: Any = user_res.data[0]
                 user_id = str(user_data["id"])
-            except Exception:
+            except Exception as exc:
                 # User probably exists. In a production system, we would 
                 # trigger an email verification or login flow here.
                 # For security, we DO NOT return a new key for an existing email.
@@ -563,7 +563,7 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.json()
-        except Exception:
+        except Exception as exc:
             return JSONResponse(
                 status_code=400,
                 content={"error": "Invalid JSON body"},
