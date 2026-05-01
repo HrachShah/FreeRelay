@@ -102,7 +102,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 if len(self._cache) >= _MAX_CACHE_SIZE:
                     self._cache.popitem(last=False)
                 self._cache[idempotency_key] = (time.time(), body, response.status_code)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("idempotency_cache_parse_error: %s", exc)
 
         return response
