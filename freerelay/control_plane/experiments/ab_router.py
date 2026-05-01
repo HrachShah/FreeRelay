@@ -190,8 +190,8 @@ class ExperimentManager:
                 config.name,
             )
             return config.id
-        except Exception:
-            logger.exception("create_experiment_error")
+        except Exception as exc:
+            logger.exception("create_experiment_error: %s", exc)
             raise
 
     async def start_experiment(self, experiment_id: str) -> bool:
@@ -211,8 +211,8 @@ class ExperimentManager:
             )
             logger.info("experiment_started id=%s", experiment_id)
             return True
-        except Exception:
-            logger.exception("start_experiment_error")
+        except Exception as exc:
+            logger.exception("start_experiment_error: %s", exc)
             return False
 
     async def stop_experiment(self, experiment_id: str, reason: str = "manual") -> bool:
@@ -229,8 +229,8 @@ class ExperimentManager:
             )
             logger.info("experiment_stopped id=%s reason=%s", experiment_id, reason)
             return True
-        except Exception:
-            logger.exception("stop_experiment_error")
+        except Exception as exc:
+            logger.exception("stop_experiment_error: %s", exc)
             return False
 
     async def get_experiment(self, experiment_id: str) -> ExperimentConfig | None:
@@ -241,8 +241,8 @@ class ExperimentManager:
             if not data:
                 return None
             return ExperimentConfig.from_redis(data)
-        except Exception:
-            logger.exception("get_experiment_error")
+        except Exception as exc:
+            logger.exception("get_experiment_error: %s", exc)
             return None
 
     async def list_experiments(
@@ -263,8 +263,8 @@ class ExperimentManager:
                     if not active_only or config.active:
                         experiments.append(config)
             return experiments
-        except Exception:
-            logger.exception("list_experiments_error")
+        except Exception as exc:
+            logger.exception("list_experiments_error: %s", exc)
             return []
 
     async def assign_arm(self, request_id: str, experiment_id: str) -> str | None:
@@ -334,9 +334,12 @@ class ExperimentManager:
                             config.quality_threshold,
                         )
 
-        except Exception:
-            logger.exception(
-                "record_outcome_error experiment=%s arm=%s", experiment_id, arm
+        except Exception as exc:
+            logger.error(
+                "record_outcome_error experiment=%s arm=%s: %s",
+                experiment_id,
+                arm,
+                exc,
             )
 
     async def get_arm_metrics(self, experiment_id: str, arm: str) -> ArmMetrics:
@@ -353,8 +356,8 @@ class ExperimentManager:
                 total_latency_ms=float(data.get("total_latency_ms", 0)),
                 total_cost=float(data.get("total_cost", 0)),
             )
-        except Exception:
-            logger.exception("get_arm_metrics_error")
+        except Exception as exc:
+            logger.exception("get_arm_metrics_error: %s", exc)
             return ArmMetrics()
 
     async def get_experiment_status(self, experiment_id: str) -> dict[str, Any]:
@@ -405,6 +408,6 @@ class ExperimentManager:
             deleted = await self._redis.delete(*keys_to_delete)
             logger.info("experiment_deleted id=%s", experiment_id)
             return deleted > 0
-        except Exception:
-            logger.exception("delete_experiment_error")
+        except Exception as exc:
+            logger.exception("delete_experiment_error: %s", exc)
             return False
