@@ -44,7 +44,7 @@ class ChaosInjector:
         if not self.enabled:
             return
 
-        if random.random() > self.intensity:
+        if random.random() < self.intensity:
             return
 
         # Pick a chaos scenario

@@ -73,7 +73,8 @@ class BudgetForecaster:
                 self.alpha * current_rate + (1 - self.alpha) * state.ewma_rate
             )
             state.tokens_used_this_minute = 0
-            state.last_updated_ts = now
+            # Align last_updated_ts to the current minute boundary
+            state.last_updated_ts = now - (elapsed % 60)
 
         state.tokens_used_today += tokens
         state.tokens_used_this_minute += tokens
