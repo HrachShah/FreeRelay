@@ -256,6 +256,8 @@ class WhatIfSimulator:
             data = await self._redis.get(key)
             if data:
                 return json.loads(data)
+        except json.JSONDecodeError:
+            logger.warning("simulation_result_invalid_json experiment_id=%s", experiment_id)
         except Exception:
             logger.exception("get_simulation_error")
         return None
@@ -272,7 +274,11 @@ class WhatIfSimulator:
             for key in sorted(keys, reverse=True)[:count]:
                 data = await self._redis.get(key)
                 if data:
-                    results.append(json.loads(data))
+                    try:
+                        results.append(json.loads(data))
+                    except json.JSONDecodeError:
+                        logger.warning("simulation_result_invalid_json key=%s", key)
+                        continue
             return results
         except Exception:
             logger.exception("list_simulations_error")

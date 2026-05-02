@@ -135,13 +135,14 @@ class ControlPlane:
                 count=100,
                 block=1000,
             )
-            for _stream_name, messages in results:
-                for msg_id, fields in messages:
-                    outcomes.append({"id": msg_id, **fields})
-                    # Acknowledge
-                    await self._redis.xack(
-                        "freerelay:outcomes", "control-plane-learner", msg_id
-                    )
+            if results:
+                for _stream_name, messages in results:
+                    for msg_id, fields in messages:
+                        outcomes.append({"id": msg_id, **fields})
+                        # Acknowledge
+                        await self._redis.xack(
+                            "freerelay:outcomes", "control-plane-learner", msg_id
+                        )
         except Exception:
             logger.exception("consume_outcomes_error")
         return outcomes
