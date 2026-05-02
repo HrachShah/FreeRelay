@@ -141,10 +141,10 @@ class ReplayEngine:
                 max=end_id,
                 count=max_records,
             )
-
-            for msg_id, fields in results:
-                record = OutcomeRecord.from_stream(msg_id, fields)
-                records.append(record)
+            if results:
+                for msg_id, fields in results:
+                    record = OutcomeRecord.from_stream(msg_id, fields)
+                    records.append(record)
 
             logger.info("replay_loaded_outcomes count=%d", len(records))
 
