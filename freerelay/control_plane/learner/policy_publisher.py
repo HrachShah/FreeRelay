@@ -96,7 +96,10 @@ class PolicyPublisher:
             if raw is None:
                 return None
             return json.loads(raw)
-        except (json.JSONDecodeError, Exception):
+        except json.JSONDecodeError:
+            logger.warning("load_current_policy_invalid_json key=%s", POLICY_KEY)
+            return None
+        except Exception:
             logger.exception("policy_load_error")
             return None
 
