@@ -167,7 +167,10 @@ class RoutingEngine:
         cheapest = min(
             viable,
             key=lambda s: self._get_cost(s.provider, s.model, model_pool),
-        )
+        ) if viable else None
+        if cheapest is None:
+            return ("", "")
+
         return (cheapest.provider, cheapest.model)
 
     def select_strongest(
