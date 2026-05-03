@@ -83,16 +83,21 @@ export default function DashboardPage() {
 
   React.useEffect(() => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001"
+    const controller = new AbortController()
+
     setLoading(true)
-    
+
     // Check health
-    fetch(`${apiUrl}/v1/hello`)
-      .then((res) => res.json())
+    fetch(`${apiUrl}/v1/hello`, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error("Health check failed")
+        return res.json()
+      })
       .then((data) => setBackendStatus(data.message || "Connected"))
-      .catch((err) => setBackendStatus("Disconnected"))
+      .catch(() => setBackendStatus("Disconnected"))
 
     // Fetch analytics
-    fetch(`${apiUrl}/v1/analytics?days=${days}`)
+    fetch(`${apiUrl}/v1/analytics?days=${days}`, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error("API error")
         return res.json()
@@ -105,6 +110,8 @@ export default function DashboardPage() {
         console.error("Failed to fetch analytics:", err)
         setLoading(false)
       })
+
+    return () => controller.abort()
   }, [days, refreshKey])
 
   const handleRefresh = () => setRefreshKey(prev => prev + 1)
