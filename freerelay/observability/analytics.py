@@ -8,7 +8,13 @@ def run_query(query: str):
     result = subprocess.run(["team-db", query], capture_output=True, text=True)
     if result.returncode != 0:
         raise Exception(f"Database query failed: {result.stderr}")
-    return json.loads(result.stdout)
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise Exception(
+            f"team-db returned malformed JSON (returncode={result.returncode}): "
+            f"{exc} — stdout: {result.stdout[:200]!r}"
+        ) from exc
 
 def get_usage_analytics(user_id: str, days: int = 7) -> UsageAnalytics:
     # Strict filter by user_id
