@@ -60,10 +60,9 @@ async def execute(
         async def call_provider(provider: str, model: str) -> tuple[str, str, int]:
             if hasattr(router, "route"):
                 response = await router.route(request)
-                content = ""
-                tokens = 0
-                if response.choices:
-                    content = response.choices[0].message.content or ""
+                if response is None or not hasattr(response, "choices") or not response.choices:
+                    return ("", provider, 0)
+                content = response.choices[0].message.content or ""
                 tokens = response.usage.total_tokens if response.usage else 0
                 return (content, provider, tokens)
             return ("", provider, 0)
