@@ -60,7 +60,7 @@ class ContextOptimizer:
         for msg in messages:
             if msg.role == "system":
                 lanes["instructions"].append(msg)
-            elif msg.role == "tool" or msg.tool_calls:
+            elif msg.role == "tool":
                 lanes["tool_outputs"].append(msg)
             elif msg.role == "assistant":
                 lanes["dialogue"].append(msg)
