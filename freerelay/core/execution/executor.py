@@ -151,10 +151,11 @@ class Executor:
         provider_keys = [(p, k) for p, k, _ in providers]
         circuits = {p.name: c for p, _, c in providers}
         try:
-            response = await hedged_execute(provider_keys, request)
-            # Record success on the circuit breaker of whichever provider won
-            for _name, circuit in circuits.items():
-                await circuit.record_success()
+            response, winner_name = await hedged_execute(provider_keys, request)
+            # Record success only on the winning provider's circuit breaker
+            winner_circuit = circuits.get(winner_name)
+            if winner_circuit:
+                await winner_circuit.record_success()
             return response
         except Exception as e:
             # Record failure on all involved circuit breakers

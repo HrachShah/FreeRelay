@@ -24,17 +24,17 @@ logger = logging.getLogger("freerelay.hedging")
 async def hedged_execute(
     providers: list[tuple[BaseProvider, str]],
     request: ChatCompletionRequest,
-) -> ChatCompletionResponse:
+) -> tuple[ChatCompletionResponse, str]:
     """
     Fire the same request at up to 2 providers in parallel.
-    Return the first response. Cancel all others.
+    Return the response and the name of the winning provider.
 
     Args:
         providers: List of (provider, api_key) tuples, max 2.
         request: The chat completion request.
 
     Returns:
-        Response from the fastest provider.
+        Tuple of (response, winner_name) from the fastest provider.
 
     Raises:
         Exception: If all providers fail.
@@ -68,8 +68,7 @@ async def hedged_execute(
         if task.exception() is None:
             winner = tasks[task]
             logger.info("Hedged winner: %s", winner.name)
-            # Cancel any remaining done tasks that weren't checked yet
-            return task.result()
+            return task.result(), winner.name
         errors.append(task.exception())  # type: ignore[arg-type]
 
     # All done tasks failed
