@@ -184,8 +184,11 @@ def status() -> None:
 
     try:
         resp = httpx.get("http://localhost:8000/v1/stats", timeout=5)
+        if not resp.is_success:
+            console.print(f"[red]✗ FreeRelay returned error {resp.status_code}. Check that the service is running.[/red]")
+            raise typer.Exit(1) from None
         data = resp.json()
-    except Exception:
+    except (httpx.RequestError, Exception):
         console.print("[red]✗ FreeRelay not running. Start with: freerelay[/red]")
         raise typer.Exit(1) from None
 
