@@ -70,8 +70,13 @@ async def execute(
 
         if hasattr(router, "route"):
             response = await router.route(request)
-            if response.choices:
-                content = response.choices[0].message.content or ""
+            if response is None or not hasattr(response, "choices") or not response.choices:
+                return StepOutput(
+                    step_id=step.step_id,
+                    status=StepStatus.FAILED,
+                    error="Router returned an invalid or empty response",
+                )
+            content = response.choices[0].message.content or ""
             tokens = response.usage.total_tokens if response.usage else 0
 
         elapsed_ms = (__import__("time").monotonic() - start_import) * 1000
