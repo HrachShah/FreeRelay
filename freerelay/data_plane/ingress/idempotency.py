@@ -84,7 +84,10 @@ class IdempotencyStore:
 
             if isinstance(data, bytes):
                 data = data.decode("utf-8")
-            return json.loads(data)
+            try:
+                return json.loads(data)
+            except json.JSONDecodeError:
+                return None
         return None
 
     def _check_memory(self, request_id: str) -> dict[str, Any] | None:
@@ -97,7 +100,10 @@ class IdempotencyStore:
             return None
         import json
 
-        return json.loads(entry.response.decode("utf-8"))
+        try:
+            return json.loads(entry.response.decode("utf-8"))
+        except json.JSONDecodeError:
+            return None
 
     async def store(self, request_id: str, response: dict[str, Any]) -> bool:
         """
