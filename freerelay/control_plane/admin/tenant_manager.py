@@ -76,7 +76,7 @@ class TenantPolicy:
         """Hydrate from Redis hash data."""
         return cls(
             namespace=data.get("namespace", ""),
-            allowed_providers=json.loads(data.get("allowed_providers", "[]")),
+            allowed_providers=_safe_json(data.get("allowed_providers"), list(VALID_PROVIDERS)),
             cost_ceiling=float(data.get("cost_ceiling", 100.0)),
             min_safety_tier=data.get("min_safety_tier", "medium"),
             economic_policy=data.get("economic_policy", "balanced"),
@@ -84,15 +84,25 @@ class TenantPolicy:
             audit_trail=data.get("audit_trail", "True") == "True",
             rate_limit_rpm=int(data.get("rate_limit_rpm", 60)),
             max_concurrent_requests=int(data.get("max_concurrent_requests", 10)),
-            preferred_models=json.loads(data.get("preferred_models", "[]")),
-            blocked_models=json.loads(data.get("blocked_models", "[]")),
-            custom_routing_rules=json.loads(data.get("custom_routing_rules", "{}")),
+            preferred_models=_safe_json(data.get("preferred_models"), []),
+            blocked_models=_safe_json(data.get("blocked_models"), []),
+            custom_routing_rules=_safe_json(data.get("custom_routing_rules"), {}),
             created_at=float(data.get("created_at", 0)),
             updated_at=float(data.get("updated_at", 0)),
             owner=data.get("owner", ""),
             description=data.get("description", ""),
             active=data.get("active", "True") == "True",
         )
+
+
+def _safe_json(data: str | None, default: Any) -> Any:
+    """Parse JSON from a string, returning a default on failure."""
+    if data is None:
+        return default
+    try:
+        return json.loads(data)
+    except json.JSONDecodeError:
+        return default
 
 
 class TenantManager:
