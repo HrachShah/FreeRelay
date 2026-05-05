@@ -84,15 +84,23 @@ class ExperimentConfig:
     @classmethod
     def from_redis(cls, data: dict[str, str]) -> ExperimentConfig:
         """Hydrate from Redis hash."""
+        def _safe_json(raw: str | None, fallback: Any) -> Any:
+            if raw is None:
+                return fallback
+            try:
+                return json.loads(raw)
+            except (json.JSONDecodeError, ValueError, TypeError):
+                return fallback
+
         return cls(
             id=data.get("id", ""),
             type=ExperimentType(data.get("type", "ab_routing")),
             name=data.get("name", ""),
             description=data.get("description", ""),
-            policy_a=json.loads(data.get("policy_a", "{}")),
-            policy_b=json.loads(data.get("policy_b", "{}")),
+            policy_a=_safe_json(data.get("policy_a"), {}),
+            policy_b=_safe_json(data.get("policy_b"), {}),
             split_percentage=int(data.get("split_percentage", 50)),
-            metrics=json.loads(data.get("metrics", '["quality","latency_ms","cost"]')),
+            metrics=_safe_json(data.get("metrics"), ["quality", "latency_ms", "cost"]),
             quality_threshold=float(
                 data.get("quality_threshold", CANARY_QUALITY_THRESHOLD)
             ),
@@ -102,7 +110,7 @@ class ExperimentConfig:
             started_at=float(data.get("started_at", 0)),
             stopped_at=float(data.get("stopped_at", 0)),
             owner=data.get("owner", ""),
-            tags=json.loads(data.get("tags", "[]")),
+            tags=_safe_json(data.get("tags"), []),
         )
 
 
