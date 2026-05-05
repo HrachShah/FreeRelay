@@ -157,6 +157,13 @@ class LeaderboardPublisher:
         key = f"freerelay:api:leaderboard:{task_family.value}"
         data = await self._redis.get(key)
         if data:
-            result: dict[str, object] = json.loads(data)
-            return result
+            try:
+                result: dict[str, object] = json.loads(data)
+                return result
+            except (json.JSONDecodeError, ValueError, TypeError):
+                logger.warning(
+                    "get_task_family_ranking: skipped malformed entry for %s",
+                    task_family.value,
+                )
+                return None
         return None
