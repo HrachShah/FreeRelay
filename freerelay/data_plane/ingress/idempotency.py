@@ -84,7 +84,14 @@ class IdempotencyStore:
 
             if isinstance(data, bytes):
                 data = data.decode("utf-8")
-            return json.loads(data)
+            try:
+                return json.loads(data)
+            except (json.JSONDecodeError, ValueError):
+                logger.warning(
+                    "idempotency: skipped malformed cached response for request_id=%s",
+                    request_id,
+                )
+                return None
         return None
 
     def _check_memory(self, request_id: str) -> dict[str, Any] | None:
@@ -97,7 +104,15 @@ class IdempotencyStore:
             return None
         import json
 
-        return json.loads(entry.response.decode("utf-8"))
+        try:
+            return json.loads(entry.response.decode("utf-8"))
+        except (json.JSONDecodeError, ValueError):
+            logger.warning(
+                "idempotency: skipped malformed in-memory response for request_id=%s",
+                request_id,
+            )
+            del self._memory_store[request_id]
+            return None
 
     async def store(self, request_id: str, response: dict[str, Any]) -> bool:
         """
