@@ -262,6 +262,8 @@ class RoutingEngine:
             score, breakdown = expected_utility(
                 slot=slot,
                 profile=profile,
+                total_pulls=100,
+                slot_pulls=0,
             )
             scored.append(
                 ProviderScore(
