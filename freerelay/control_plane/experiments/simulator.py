@@ -255,7 +255,10 @@ class WhatIfSimulator:
             key = f"{SIMULATION_RESULTS_KEY}:{experiment_id}"
             data = await self._redis.get(key)
             if data:
-                return json.loads(data)
+                try:
+                    return json.loads(data)
+                except (json.JSONDecodeError, ValueError):
+                    logger.warning("skipping corrupted simulation result for %s", experiment_id)
         except Exception:
             logger.exception("get_simulation_error")
         return None
@@ -272,7 +275,10 @@ class WhatIfSimulator:
             for key in sorted(keys, reverse=True)[:count]:
                 data = await self._redis.get(key)
                 if data:
-                    results.append(json.loads(data))
+                    try:
+                        results.append(json.loads(data))
+                    except (json.JSONDecodeError, ValueError):
+                        logger.warning("skipping corrupted simulation entry for %s", key)
             return results
         except Exception:
             logger.exception("list_simulations_error")
