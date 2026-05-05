@@ -370,7 +370,13 @@ class BenchmarkEngine:
         key = f"{RESULTS_KEY_PREFIX}:{provider}:{model}:{suite_name}"
         try:
             entries = await self._redis.zrevrange(key, 0, count - 1)
-            return [json.loads(e) for e in entries]
+            results = []
+            for e in entries:
+                try:
+                    results.append(json.loads(e))
+                except (json.JSONDecodeError, TypeError):
+                    logger.warning("get_results: skipping malformed entry for %s:%s:%s", provider, model, suite_name)
+            return results
         except Exception:
             logger.exception("get_results_error")
             return []
@@ -394,7 +400,11 @@ class BenchmarkEngine:
                     model = parts[3]
                     latest = await self._redis.zrevrange(key, 0, 0)
                     if latest:
-                        data = json.loads(latest[0])
+                        try:
+                            data = json.loads(latest[0])
+                        except (json.JSONDecodeError, TypeError):
+                            logger.warning("get_provider_comparison: skipping malformed entry for key=%s", key)
+                            continue
                         data["provider"] = provider
                         data["model"] = model
                         comparison.append(data)
