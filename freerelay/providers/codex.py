@@ -228,10 +228,13 @@ def get_codex_token_status() -> dict[str, object]:
         parts = token.split(".")
         if len(parts) == 2:
             payload_b64 = parts[1] + "=" * (4 - len(parts[1]) % 4)
-            payload = json.loads(base64.urlsafe_b64decode(payload_b64).decode("utf-8"))
+            try:
+                payload = json.loads(base64.urlsafe_b64decode(payload_b64).decode("utf-8"))
+            except (json.JSONDecodeError, ValueError):
+                payload = {}
             exp = payload.get("exp", 0)
             plan = payload.get("chatgpt_plan_type", "unknown")
-            is_expired = exp < time.time() if exp else False
+            is_expired = bool(exp and exp < time.time())
 
             return {
                 "authenticated": True,
