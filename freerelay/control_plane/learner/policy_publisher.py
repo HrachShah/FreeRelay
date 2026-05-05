@@ -96,7 +96,7 @@ class PolicyPublisher:
             if raw is None:
                 return None
             return json.loads(raw)
-        except (json.JSONDecodeError, Exception):
+        except (json.JSONDecodeError, ValueError, Exception):
             logger.exception("policy_load_error")
             return None
 
@@ -104,7 +104,13 @@ class PolicyPublisher:
         """Retrieve recent policy version history."""
         try:
             entries = await self._redis.lrange(POLICY_HISTORY_KEY, 0, count - 1)
-            return [json.loads(e) for e in entries]
+            results = []
+            for e in entries:
+                try:
+                    results.append(json.loads(e))
+                except (json.JSONDecodeError, ValueError):
+                    logger.warning("skipping corrupted policy version entry")
+            return results
         except Exception:
             logger.exception("policy_history_error")
             return []
@@ -122,7 +128,12 @@ class PolicyPublisher:
                 logger.error("rollback_version_not_found version=%s", target_version)
                 return False
 
-            policy = json.loads(raw)
+            try:
+                policy = json.loads(raw)
+            except (json.JSONDecodeError, ValueError):
+                logger.error("rollback_corrupted_policy version=%s", target_version)
+                return False
+
             await self.publish(policy, reason=f"rollback_to_{target_version}")
             logger.info("policy_rollback version=%s", target_version)
             return True
