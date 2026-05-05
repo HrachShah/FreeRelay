@@ -231,8 +231,8 @@ class CapabilityUpdater:
                 "schema_compliance_rate": float(
                     data.get("schema_compliance_rate", 1.0)
                 ),
-                "quality_by_task_family": json.loads(
-                    data.get("quality_by_task_family", "{}")
+                "quality_by_task_family": _safe_json_load(
+                    data.get("quality_by_task_family"), {}
                 ),
                 "latency_degraded": data.get("latency_degraded", "False") == "True",
                 "error_rate_degraded": data.get("error_rate_degraded", "False")
@@ -242,6 +242,14 @@ class CapabilityUpdater:
         except Exception:
             logger.exception("get_stats_error provider=%s model=%s", provider, model)
             return {}
+
+
+def _safe_json_load(data: Any, default: Any) -> Any:
+    """Safely load JSON from data, returning default on failure."""
+    try:
+        return json.loads(data) if data is not None else default
+    except (json.JSONDecodeError, TypeError):
+        return default
 
 
 def _percentile(sorted_values: list[float], pct: float) -> float:
