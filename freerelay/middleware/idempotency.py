@@ -11,9 +11,10 @@ import json
 import logging
 import time
 from collections import OrderedDict
+from typing import TYPE_CHECKING
 
 from fastapi import Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
@@ -95,14 +96,14 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         # Cache the response for idempotent replays
         # Note: We can't easily read the response body from a StreamingResponse
         # so we only cache JSON responses
-        if hasattr(response, "body"):
+        if not isinstance(response, StreamingResponse) and hasattr(response, "body"):
             try:
                 body = json.loads(response.body.decode())  # type: ignore[union-attr]
                 # Evict oldest entry if at capacity
                 if len(self._cache) >= _MAX_CACHE_SIZE:
                     self._cache.popitem(last=False)
                 self._cache[idempotency_key] = (time.time(), body, response.status_code)
-            except Exception as exc:
+            except (ValueError, TypeError) as exc:
                 logger.debug("idempotency_cache_parse_error: %s", exc)
 
         return response
