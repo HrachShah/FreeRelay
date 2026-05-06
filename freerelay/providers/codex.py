@@ -247,7 +247,7 @@ def get_codex_token_status() -> dict[str, object]:
                     else "Token expired. Re-authenticate with 'openclaw configure'."
                 ),
             }
-    except Exception:
+    except (TypeError, ValueError, AttributeError):
         pass
 
     return {
