@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import json
 import yaml  # type: ignore[import-untyped]
 
 from freerelay.config.settings import Settings
@@ -467,13 +468,12 @@ class RoutingEngine:
                         data_str = line[6:].strip()
                         if data_str and data_str != "[DONE]":
                             try:
-                                import json
                                 chunk = json.loads(data_str)
                                 if "choices" in chunk and chunk["choices"]:
                                     delta = chunk["choices"][0].get("delta", {})
                                     if "content" in delta and delta["content"]:
                                         full_content.append(delta["content"])
-                            except Exception:
+                            except (json.JSONDecodeError, ValueError, TypeError):
                                 pass
 
                 elapsed_ms = (time.time() - start_time) * 1000

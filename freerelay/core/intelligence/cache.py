@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import json
 import logging
 import time
 from dataclasses import dataclass, field
@@ -101,8 +102,6 @@ class SemanticCache:
             content = msg.content if isinstance(msg.content, str) else ""
             entry = f"{msg.role}:{content.strip()}"
             if msg.tool_calls:
-                import json
-
                 tc_parts = []
                 for tc in msg.tool_calls:
                     tc_parts.append(f"{tc.function.name}:{tc.function.arguments}")
@@ -133,7 +132,7 @@ class SemanticCache:
         if entry and (time.time() - entry.created_at) < entry.ttl:
             try:
                 return ChatCompletionResponse.model_validate_json(entry.response_json)
-            except Exception:
+            except (ValueError, TypeError):
                 del self._entries[key]
                 return None
 
@@ -153,9 +152,9 @@ class SemanticCache:
                                 return ChatCompletionResponse.model_validate_json(
                                     candidate.response_json
                                 )
-                            except Exception:
+                            except (ValueError, TypeError):
                                 continue
-                except Exception:
+                except (ValueError, TypeError):
                     pass
 
         return None
