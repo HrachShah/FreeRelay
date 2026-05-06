@@ -164,8 +164,8 @@ class RoutingEngine:
             matrix = CapabilityMatrix.model_validate(data)
             logger.info("Loaded capability matrix: %d models", len(matrix.models))
             return matrix
-        except Exception:
-            logger.exception("Failed to load capability matrix: %s", path)
+        except (OSError, yaml.YAMLError) as exc:
+            logger.exception("Failed to load capability matrix: %s: %s", path, exc)
             return None
 
     def _load_routing_policy(self, settings: Settings) -> RoutingPolicy:
@@ -414,7 +414,7 @@ class RoutingEngine:
                 last_error = e
                 continue
 
-            except Exception as e:
+            except (AttributeError, TypeError, KeyError) as e:
                 await slot.circuit.record_failure(None)
                 slot.error_count += 1
                 logger.exception("%s unexpected error: %s", provider.name, e)
@@ -508,7 +508,7 @@ class RoutingEngine:
                 logger.warning("%s stream error: %s", provider.name, str(e)[:100])
                 continue
 
-            except Exception as e:
+            except (AttributeError, TypeError, KeyError) as e:
                 await slot.circuit.record_failure(None)
                 slot.error_count += 1
                 logger.exception("%s stream exception: %s", provider.name, e)
