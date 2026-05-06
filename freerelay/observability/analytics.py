@@ -19,7 +19,13 @@ def get_usage_analytics(user_id: str, days: int = 7) -> UsageAnalytics:
             savings_percentage=0, top_models=[], daily_trends=[],
             projected_monthly_savings=0
         )
-        
+
+    # Guard: user_id must be a safe identifier to prevent SQL injection.
+    # Reject any string containing characters outside the UUID format.
+    import re
+    if not re.fullmatch(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", user_id):
+        raise ValueError("Invalid user_id format")
+
     base_filter = f"user_id = '{user_id}'"
     
     # Add time filter
