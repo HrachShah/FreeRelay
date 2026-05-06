@@ -47,7 +47,7 @@ class MetricsBroadcaster:
         for client in self._clients:
             try:
                 await client.send_text(message)
-            except Exception:
+            except (RuntimeError, AttributeError):
                 disconnected.append(client)
 
         for client in disconnected:
@@ -75,7 +75,7 @@ class MetricsBroadcaster:
                             "data": metrics,
                         }
                     )
-            except Exception as e:
+            except (RuntimeError, OSError) as e:
                 logger.error("Metrics broadcast error: %s", e)
 
             await asyncio.sleep(self.interval)
