@@ -331,8 +331,11 @@ def ask(
                 console.print(f"[red]Error: {str(e)}[/red]")
             finally:
                 # Cleanup shared HTTP client
-                from freerelay.shared.http_client import close_client
-                await close_client()
+                try:
+                    from freerelay.shared.http_client import close_client
+                    await close_client()
+                except (ImportError, AttributeError):
+                    pass
 
     asyncio.run(_ask())
 
