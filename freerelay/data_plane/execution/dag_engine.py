@@ -239,6 +239,8 @@ def _evaluate_condition(condition: str, context: dict[str, Any]) -> bool:
     Supported: "step_id.status == 'completed'", "step_id.status != 'failed'",
                "step_id.content contains 'text'"
     """
+    if not isinstance(condition, str):
+        return True
     try:
         if "==" in condition:
             parts = condition.split("==", 1)
@@ -258,7 +260,7 @@ def _evaluate_condition(condition: str, context: dict[str, Any]) -> bool:
             expected = parts[1].strip().strip("'\"")
             actual = _resolve_path(field_path, context)
             return expected in str(actual) if actual else False
-    except Exception:
+    except (KeyError, IndexError, AttributeError):
         logger.debug("Condition evaluation failed: %s", condition)
     return True  # Default to true on parse failure
 
