@@ -13,6 +13,8 @@ import logging
 import time
 from typing import Any
 
+import websockets
+
 logger = logging.getLogger("freerelay.dashboard_ws")
 
 
@@ -47,7 +49,7 @@ class MetricsBroadcaster:
         for client in self._clients:
             try:
                 await client.send_text(message)
-            except Exception:
+            except websockets.ConnectionClosed:
                 disconnected.append(client)
 
         for client in disconnected:
