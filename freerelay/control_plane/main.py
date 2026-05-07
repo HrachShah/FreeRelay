@@ -135,6 +135,8 @@ class ControlPlane:
                 count=100,
                 block=1000,
             )
+            if not results:
+                return outcomes
             for _stream_name, messages in results:
                 for msg_id, fields in messages:
                     outcomes.append({"id": msg_id, **fields})
@@ -142,7 +144,7 @@ class ControlPlane:
                     await self._redis.xack(
                         "freerelay:outcomes", "control-plane-learner", msg_id
                     )
-        except Exception:
+        except (aioredis.ResponseError, aioredis.ConnectionError, OSError):
             logger.exception("consume_outcomes_error")
         return outcomes
 
@@ -272,7 +274,7 @@ class ControlPlane:
                 logger.info(
                     "policy_published version=%s", policy.get("version", "unknown")
                 )
-        except Exception:
+        except (aioredis.ResponseError, aioredis.ConnectionError, OSError, json.JSONDecodeError):
             logger.exception("policy_publish_error")
 
 
