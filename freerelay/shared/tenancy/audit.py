@@ -221,7 +221,7 @@ class AuditLogger:
                         namespace,
                     )
                     return len(ids)
-            except Exception as exc:
+            except (redis.ResponseError, redis.ConnectionError, OSError) as exc:
                 logger.error("Failed to purge audit records: %s", exc)
             return 0
 
@@ -252,7 +252,7 @@ class AuditLogger:
                     maxlen=100_000,  # Cap stream size
                 )
                 return
-            except Exception as exc:
+            except (redis.ResponseError, redis.ConnectionError, OSError) as exc:
                 logger.error("Redis audit write failed, falling back to memory: %s", exc)
 
         # In-memory fallback
@@ -289,7 +289,7 @@ class AuditLogger:
             # Return newest first
             records.reverse()
             return records
-        except Exception as exc:
+        except (redis.ResponseError, redis.ConnectionError, OSError) as exc:
             logger.error("Redis audit read failed: %s", exc)
             return []
 
