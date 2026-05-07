@@ -123,7 +123,7 @@ async def execute(
             },
         )
 
-    except Exception as e:
+    except (ValueError, KeyError, AttributeError, RuntimeError, Exception) as e:
         return StepOutput(
             step_id=step.step_id,
             status=StepStatus.FAILED,
