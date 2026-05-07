@@ -189,7 +189,7 @@ class PolicyDSL:
         except FileNotFoundError:
             logger.warning("Policy file not found: %s", path)
             return []
-        except Exception:
+        except (OSError, yaml.YAMLError):
             logger.exception("Failed to load policy file: %s", path)
             return []
 
@@ -232,7 +232,7 @@ class PolicyDSL:
                 condition_mode=condition_mode,
                 action=action,
             )
-        except Exception:
+        except (ValueError, KeyError, AttributeError, TypeError):
             logger.exception("Failed to parse policy: %s", raw)
             return None
 
