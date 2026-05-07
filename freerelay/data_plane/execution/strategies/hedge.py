@@ -131,13 +131,13 @@ async def execute(
                 if result.status == StepStatus.COMPLETED:
                     winner = result
                     break
-            except Exception:
+            except (ValueError, TypeError):
                 continue
 
         # Cancel pending tasks
         for task in pending:
             task.cancel()
-            with contextlib.suppress(asyncio.CancelledError, Exception):
+            with contextlib.suppress(asyncio.CancelledError, ValueError, TypeError):
                 await task
 
         if winner is None:
@@ -148,7 +148,7 @@ async def execute(
                     r = task.result()
                     if r.error:
                         errors.append(r.error)
-                except Exception as e:
+                except (ValueError, TypeError) as e:
                     errors.append(str(e))
 
             return StepOutput(
@@ -163,7 +163,7 @@ async def execute(
         winner.metadata["hedge_delay_ms"] = delay_ms
         return winner
 
-    except Exception as e:
+    except (ValueError, TypeError, RuntimeError) as e:
         return StepOutput(
             step_id=step.step_id,
             status=StepStatus.FAILED,
