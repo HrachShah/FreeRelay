@@ -125,7 +125,7 @@ async def retry_with_backoff[T](
     for attempt in range(max_retries + 1):
         try:
             return await coro_factory()
-        except Exception as exc:
+        except (RetryableError, asyncio.TimeoutError, ConnectionError, Exception) as exc:
             last_exc = exc
 
             if not classify_error(exc):
