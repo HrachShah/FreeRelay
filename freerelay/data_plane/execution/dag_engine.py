@@ -187,7 +187,7 @@ def compile_workflow(yaml_str: str) -> WorkflowDefinition:
             global_timeout_ms=data.get("global_timeout_ms", 120000),
             metadata=data.get("metadata", {}),
         )
-    except Exception:
+    except (ValueError, KeyError) as e:
         logger.exception("Failed to compile workflow")
         return WorkflowDefinition(name="error")
 
@@ -345,14 +345,7 @@ class DAGEngine:
                     if tasks:
                         await asyncio.gather(*tasks, return_exceptions=True)
 
-        except TimeoutError:
-            logger.error(
-                "Workflow %s timed out after %dms",
-                workflow.name,
-                workflow.global_timeout_ms,
-            )
-            trace.status = "timeout"
-        except Exception as e:
+        except (asyncio.CancelledError, Exception) as e:
             logger.exception("Workflow execution failed: %s", e)
             trace.status = "error"
 
