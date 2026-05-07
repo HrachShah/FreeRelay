@@ -118,7 +118,7 @@ def _aes_gcm_decrypt(ciphertext: bytes, key: bytes, nonce: bytes, tag: bytes) ->
             "cryptography package required for AES-256-GCM. "
             "Install with: pip install cryptography"
         ) from e
-    except Exception as exc:
+    except (ValueError, TypeError) as exc:
         raise ValueError("Decryption failed: invalid key or corrupted data") from exc
 
 
