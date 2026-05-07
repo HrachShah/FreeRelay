@@ -160,7 +160,7 @@ def inject_trace_headers(headers: dict[str, str]) -> dict[str, str]:
     try:
         propagator = TraceContextTextMapPropagator()
         propagator.inject(headers)
-    except Exception:
+    except (OSError, RuntimeError):
         logger.debug("Failed to inject trace headers", exc_info=True)
 
     return headers
@@ -182,6 +182,6 @@ def extract_trace_context(headers: dict[str, str]) -> Any:
     try:
         propagator = TraceContextTextMapPropagator()
         return propagator.extract(headers)
-    except Exception:
+    except (OSError, ValueError, KeyError):
         logger.debug("Failed to extract trace context", exc_info=True)
         return {}
