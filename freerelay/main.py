@@ -316,11 +316,12 @@ def create_app() -> FastAPI:
     @app.post("/v1/billing/checkout", response_model=None)
     async def billing_checkout(req: CheckoutRequest) -> CheckoutResponse:
         from freerelay.integrations.stripe import create_checkout_session
+        import stripe
 
         try:
             session = create_checkout_session(req.email, req.price_id)
             return CheckoutResponse(url=session.url)
-        except Exception as e:
+        except stripe.error.StripeError as e:
             logger.exception("Stripe session creation failed")
             return JSONResponse(
                 status_code=500,
@@ -341,7 +342,7 @@ def create_app() -> FastAPI:
             event = stripe.Webhook.construct_event(
                 payload, sig_header, settings.stripe_webhook_secret
             )  # type: ignore[no-untyped-call]
-        except Exception as e:
+        except (ValueError, stripe.error.SignatureVerificationError) as e:
             return Response(content=str(e), status_code=400)
 
         if event["type"] == "checkout.session.completed":
