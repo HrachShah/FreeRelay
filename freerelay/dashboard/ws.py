@@ -77,7 +77,7 @@ class MetricsBroadcaster:
                             "data": metrics,
                         }
                     )
-            except Exception as e:
+            except (asyncio.CancelledError, OSError) as e:
                 logger.error("Metrics broadcast error: %s", e)
 
             await asyncio.sleep(self.interval)
