@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import redis
 import logging
 import time
 from dataclasses import dataclass
@@ -101,7 +102,7 @@ class AuthProvider:
                     result.decode("utf-8") if isinstance(result, bytes) else str(result)
                 )
             return None
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception("Redis key lookup failed for hash %s", key_hash[:8])
             return None
 

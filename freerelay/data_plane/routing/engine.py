@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
+import redis
 from typing import Any
 
 from freerelay.data_plane.profiler.workload import WorkloadProfile
@@ -88,7 +89,7 @@ class RoutingEngine:
                     }
                     self._capability_cache[key] = caps
                     return caps
-            except Exception:
+            except (redis.ConnectionError, redis.ResponseError):
                 logger.debug("Failed to load capabilities for %s", key)
 
         return {}
