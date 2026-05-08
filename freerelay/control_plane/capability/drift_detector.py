@@ -13,7 +13,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-import redis.asyncio as aioredis
+import redis.asyncio as redis
+from redis.exceptions import ResponseError as RedisResponseError, ConnectionError as RedisConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +142,7 @@ class DriftDetector:
     by setting degradation flags in the capability registry.
     """
 
-    def __init__(self, redis_client: aioredis.Redis) -> None:
+    def __init__(self, redis_client: redis.Redis) -> None:
         self._redis = redis_client
 
     async def detect_provider_metric(
@@ -166,7 +167,7 @@ class DriftDetector:
         try:
             raw_history = await self._redis.lrange(history_key, 0, -1)
             values = [float(v) for v in raw_history]
-        except Exception:
+        except (RedisResponseError, RedisConnectionError, ValueError):
             logger.exception(
                 "detect_read_error provider=%s metric=%s", provider, metric
             )
@@ -251,7 +252,7 @@ class DriftDetector:
                     result = await self.detect_provider_metric(provider, metric)
                     results.append(result)
 
-        except Exception:
+        except (RedisResponseError, RedisConnectionError):
             logger.exception("detect_all_error")
 
         return results
@@ -278,7 +279,7 @@ class DriftDetector:
             pipe.lpush(key, str(value))
             pipe.ltrim(key, 0, max_history - 1)
             await pipe.execute()
-        except Exception:
+        except (RedisResponseError, RedisConnectionError):
             logger.exception(
                 "append_metric_error provider=%s metric=%s", provider, metric
             )
@@ -297,7 +298,7 @@ class DriftDetector:
                     await self._redis.hset(
                         cap_key, "last_degraded_at", str(time.time())
                     )
-        except Exception:
+        except (RedisResponseError, RedisConnectionError):
             logger.exception(
                 "set_degradation_error provider=%s metric=%s", provider, metric
             )
@@ -313,7 +314,7 @@ class DriftDetector:
         try:
             raw = await self._redis.lrange(key, 0, count - 1)
             return [float(v) for v in raw]
-        except Exception:
+        except (RedisResponseError, RedisConnectionError, ValueError):
             logger.exception(
                 "get_history_error provider=%s metric=%s", provider, metric
             )
