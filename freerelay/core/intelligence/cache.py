@@ -14,6 +14,7 @@ import time
 from dataclasses import dataclass, field
 
 from freerelay.core.models.openai import ChatCompletionRequest, ChatCompletionResponse
+from pydantic import ValidationError
 
 logger = logging.getLogger("freerelay.cache")
 
@@ -133,7 +134,7 @@ class SemanticCache:
         if entry and (time.time() - entry.created_at) < entry.ttl:
             try:
                 return ChatCompletionResponse.model_validate_json(entry.response_json)
-            except Exception:
+            except ValidationError:
                 del self._entries[key]
                 return None
 
@@ -143,20 +144,20 @@ class SemanticCache:
             if minhash is not None:
                 try:
                     results = self._lsh.query(minhash)
-                    for result_key in results:
-                        candidate = self._entries.get(result_key)
-                        if (
-                            candidate
-                            and (time.time() - candidate.created_at) < candidate.ttl
-                        ):
-                            try:
-                                return ChatCompletionResponse.model_validate_json(
-                                    candidate.response_json
-                                )
-                            except Exception:
-                                continue
-                except Exception:
-                    pass
+                except (ValueError, TypeError):
+                    results = []
+                for result_key in results:
+                    candidate = self._entries.get(result_key)
+                    if (
+                        candidate
+                        and (time.time() - candidate.created_at) < candidate.ttl
+                    ):
+                        try:
+                            return ChatCompletionResponse.model_validate_json(
+                                candidate.response_json
+                            )
+                        except ValidationError:
+                            continue
 
         return None
 
