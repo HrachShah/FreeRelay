@@ -65,7 +65,7 @@ class Condition:
             if op_func is None:
                 return False
             return op_func(actual, self.value)
-        except Exception:
+        except (TypeError, ValueError, ZeroDivisionError):
             return False
 
     def _resolve_field(self, context: dict[str, Any], path: str) -> Any:
