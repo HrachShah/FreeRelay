@@ -190,7 +190,10 @@ class ExperimentManager:
                 config.name,
             )
             return config.id
-        except Exception:
+        except aioredis.ConnectionError:
+            logger.exception("create_experiment_error")
+            raise
+        except aioredis.ResponseError:
             logger.exception("create_experiment_error")
             raise
 
