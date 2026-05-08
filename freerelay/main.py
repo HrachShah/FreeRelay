@@ -94,7 +94,7 @@ def create_app() -> FastAPI:
         from fastapi.responses import ORJSONResponse
 
         default_response_class: type[Response] = ORJSONResponse
-    except Exception:
+    except (ImportError, OSError):
         default_response_class = JSONResponse
 
     app = FastAPI(
@@ -202,7 +202,7 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.body()
-        except Exception:
+        except OSError:
             return JSONResponse(
                 status_code=400,
                 content=ChatCompletionResponse.error_body("Invalid JSON body", 400),
@@ -210,7 +210,7 @@ def create_app() -> FastAPI:
 
         try:
             req = ChatCompletionRequest.model_validate_json(body)
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             return JSONResponse(
                 status_code=400,
                 content=ChatCompletionResponse.error_body(f"Invalid request: {e}", 400),
@@ -275,22 +275,23 @@ def create_app() -> FastAPI:
     async def register(req: RegisterRequest) -> RegisterResponse:
         from freerelay.shared.security.crypto import generate_api_key, hash_api_key
         from freerelay.shared.tenancy.supabase import get_supabase_admin_client
+        import supabase
 
         api_key = generate_api_key()
         key_hash = hash_api_key(api_key)
 
         try:
-            supabase = get_supabase_admin_client()
+            sb = get_supabase_admin_client()
             # 1. Create user (Strict insert to prevent account hijacking)
             try:
                 user_res = (
-                    supabase.table("users")
+                    sb.table("users")
                     .insert({"email": req.email})
                     .execute()
                 )
                 user_data: Any = user_res.data[0]
                 user_id = str(user_data["id"])
-            except Exception:
+            except (supabase.APIError, Exception):
                 # User probably exists. In a production system, we would 
                 # trigger an email verification or login flow here.
                 # For security, we DO NOT return a new key for an existing email.
@@ -300,7 +301,7 @@ def create_app() -> FastAPI:
                 )  # type: ignore
 
             # 2. Store hashed key
-            supabase.table("api_keys").insert(
+            sb.table("api_keys").insert(
                 {"user_id": user_id, "key_hash": key_hash, "label": "Default Key"}
             ).execute()
 
@@ -340,7 +341,7 @@ def create_app() -> FastAPI:
             event = stripe.Webhook.construct_event(
                 payload, sig_header, settings.stripe_webhook_secret
             )  # type: ignore[no-untyped-call]
-        except Exception as e:
+        except ValueError as e:
             return Response(content=str(e), status_code=400)
 
         if event["type"] == "checkout.session.completed":
@@ -563,7 +564,7 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.json()
-        except Exception:
+        except (ValueError, TypeError):
             return JSONResponse(
                 status_code=400,
                 content={"error": "Invalid JSON body"},
@@ -589,7 +590,7 @@ def create_app() -> FastAPI:
                 status_code=400,
                 content={"error": str(e)},
             )
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             return JSONResponse(
                 status_code=500,
                 content={"error": f"CLI backend error: {str(e)[:200]}"},
