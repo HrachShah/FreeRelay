@@ -166,7 +166,7 @@ class DriftDetector:
         try:
             raw_history = await self._redis.lrange(history_key, 0, -1)
             values = [float(v) for v in raw_history]
-        except Exception:
+        except (aioredis.ResponseError, ValueError):
             logger.exception(
                 "detect_read_error provider=%s metric=%s", provider, metric
             )

@@ -233,7 +233,7 @@ class CapabilityRegistry:
             if not data:
                 return None
             return CapabilityRecord.from_redis(data)
-        except Exception:
+        except (aioredis.ResponseError, OSError):
             logger.exception("get_record_error provider=%s model=%s", provider, model)
             return None
 
