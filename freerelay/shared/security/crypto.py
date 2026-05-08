@@ -12,6 +12,7 @@ import hmac
 import json
 import os
 import secrets
+import binascii
 from typing import Any, cast
 
 # ─── AES-256-GCM ─────────────────────────────────────────────────────────────
@@ -68,7 +69,7 @@ def decrypt_key(ciphertext: str, secret: bytes) -> str:
 
     try:
         bundle = base64.b64decode(ciphertext)
-    except Exception as exc:
+    except (binascii.Error, ValueError) as exc:
         raise ValueError("Invalid base64 ciphertext") from exc
 
     if len(bundle) < 28:  # 12 (nonce) + 16 (tag) minimum
@@ -110,6 +111,7 @@ def _aes_gcm_decrypt(ciphertext: bytes, key: bytes, nonce: bytes, tag: bytes) ->
     """
     try:
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # type: ignore
+        from cryptography.exceptions import InvalidTag
 
         aesgcm = AESGCM(key)
         return cast(bytes, aesgcm.decrypt(nonce, tag + ciphertext, None))
@@ -118,6 +120,8 @@ def _aes_gcm_decrypt(ciphertext: bytes, key: bytes, nonce: bytes, tag: bytes) ->
             "cryptography package required for AES-256-GCM. "
             "Install with: pip install cryptography"
         ) from e
+    except InvalidTag as exc:
+        raise ValueError("Decryption failed: invalid key or corrupted data") from exc
     except Exception as exc:
         raise ValueError("Decryption failed: invalid key or corrupted data") from exc
 
