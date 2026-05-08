@@ -127,7 +127,7 @@ class PolicyPublisher:
             logger.info("policy_rollback version=%s", target_version)
             return True
 
-        except Exception:
+        except json.JSONDecodeError:
             logger.exception("rollback_error")
             return False
 
