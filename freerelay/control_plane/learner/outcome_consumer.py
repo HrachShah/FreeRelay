@@ -167,7 +167,7 @@ class OutcomeConsumer:
                 count=batch_size,
                 block=block_ms,
             )
-        except Exception:
+        except (aioredis.ResponseError, aioredis.ConnectionError):
             logger.exception("consume_batch_read_error")
             return []
 
