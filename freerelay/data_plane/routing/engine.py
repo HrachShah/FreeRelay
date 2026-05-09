@@ -90,7 +90,7 @@ class RoutingEngine:
                     }
                     self._capability_cache[key] = caps
                     return caps
-            except Exception:
+            except (redis.ResponseError, redis.ConnectionError):
                 logger.debug("Failed to load capabilities for %s", key)
 
         return {}
