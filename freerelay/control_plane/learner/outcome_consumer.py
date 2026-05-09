@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import redis.asyncio as aioredis
+import redis.exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -136,17 +137,26 @@ class OutcomeConsumer:
             logger.info(
                 "consumer_group_created stream=%s group=%s", self._stream, self._group
             )
-        except Exception as exc:
-            # BUSYGROUP means the group already exists — that's fine
-            if "BUSYGROUP" in str(exc):
-                logger.debug(
-                    "consumer_group_exists stream=%s group=%s",
-                    self._stream,
-                    self._group,
-                )
-            else:
-                logger.exception("consumer_group_create_error")
-                raise
+        except redis.exceptions.BusyLoadingError:
+            logger.debug(
+                "consumer_group_not_ready stream=%s group=%s",
+                self._stream,
+                self._group,
+            )
+            raise
+        except redis.exceptions.GroupNotEmptyError:
+            logger.debug(
+                "consumer_group_exists stream=%s group=%s",
+                self._stream,
+                self._group,
+            )
+        except redis.exceptions.RedisError:
+            logger.exception("consumer_group_create_error")
+            raise
+        except Exception:
+            # Catch anything else (OS-level socket errors, etc.) as a last resort
+            logger.exception("consumer_group_create_error")
+            raise
         self._group_ready = True
 
     async def consume_batch(
