@@ -143,9 +143,9 @@ class ControlPlane:
                         await self._redis.xack(
                             "freerelay:outcomes", "control-plane-learner", msg_id
                         )
-                    except Exception:
+                    except (redis.ResponseError, redis.ConnectionError):
                         logger.exception("consume_outcomes_error")
-        except Exception:
+        except (redis.ResponseError, redis.ConnectionError):
             logger.exception("consume_outcomes_error")
         return outcomes
 
