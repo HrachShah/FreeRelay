@@ -245,7 +245,7 @@ def benchmark(
                     )
                     if r.status_code == 200:
                         latencies.append((time.time() - start) * 1000)
-                except Exception:
+                except httpx.RequestError:
                     pass
 
             await asyncio.gather(*[send() for _ in range(requests)])
