@@ -12,6 +12,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+import redis.asyncio as aioredis
+
 from freerelay.data_plane.profiler.workload import WorkloadProfile
 
 logger = logging.getLogger("freerelay.data_plane.routing")

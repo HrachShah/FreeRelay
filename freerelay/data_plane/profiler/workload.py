@@ -134,8 +134,8 @@ class WorkloadProfiler:
                 value, confidence = classifier(request, headers)
                 values[axis_name] = value
                 axis_confidences[axis_name] = confidence
-            except Exception:
-                logger.exception("Axis classifier %s failed", axis_name)
+            except (TypeError, ValueError, KeyError) as exc:
+                logger.exception("Axis classifier %s failed: %s", axis_name, exc)
                 values[axis_name] = "unknown"
                 axis_confidences[axis_name] = 0.0
 
