@@ -59,7 +59,7 @@ class CapabilityUpdater:
                     provider, model, outcome.task_family, outcome.judge_score
                 )
 
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception(
                 "process_outcome_error provider=%s model=%s", provider, model
             )
@@ -123,7 +123,7 @@ class CapabilityUpdater:
             # Recompute aggregates
             await self._recompute_provider_stats(provider, model)
 
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception(
                 "process_provider_batch_error provider=%s model=%s", provider, model
             )
@@ -210,7 +210,7 @@ class CapabilityUpdater:
 
             await self._redis.hset(cap_key, "last_updated_ts", str(time.time()))
 
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception(
                 "recompute_stats_error provider=%s model=%s", provider, model
             )
@@ -239,7 +239,7 @@ class CapabilityUpdater:
                 == "True",
                 "last_updated_ts": float(data.get("last_updated_ts", 0)),
             }
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception("get_stats_error provider=%s model=%s", provider, model)
             return {}
 
