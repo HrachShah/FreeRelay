@@ -68,6 +68,6 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 elapsed_ms = (time.time() - start) * 1000
                 span.set_attribute("duration_ms", round(elapsed_ms, 1))
-                span.set_status(StatusCode.ERROR, str(e))  # type: ignore[name-defined]
+                span.set_status(StatusCode.ERROR, f"request failed: {e}")  # type: ignore[name-defined]
                 span.record_exception(e)
                 raise
