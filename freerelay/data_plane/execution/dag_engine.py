@@ -190,7 +190,7 @@ def compile_workflow(yaml_str: str) -> WorkflowDefinition:
     except yaml.YAMLError as e:
         logger.error("YAML parse error in workflow: %s", e)
         raise ValueError(f"Invalid workflow YAML: {e}") from e
-    except Exception:
+    except (ValueError, KeyError):
         logger.exception("Failed to compile workflow")
         raise
 
@@ -261,7 +261,7 @@ def _evaluate_condition(condition: str, context: dict[str, Any]) -> bool:
             expected = parts[1].strip().strip("'\"")
             actual = _resolve_path(field_path, context)
             return expected in str(actual) if actual else False
-    except Exception:
+    except (ValueError, KeyError):
         logger.debug("Condition evaluation failed: %s", condition)
     return True  # Default to true on parse failure
 
