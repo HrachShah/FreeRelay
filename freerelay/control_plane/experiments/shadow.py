@@ -221,7 +221,7 @@ class ShadowRouter:
             pipe.lpush(key, data)
             pipe.ltrim(key, 0, 999)  # keep last 1000 shadow results
             await pipe.execute()
-        except Exception:
+        except (TypeError, ValueError, OSError):
             logger.exception("store_shadow_result_error")
 
     async def get_shadow_results(
@@ -234,7 +234,7 @@ class ShadowRouter:
             key = f"{SHADOW_RESULTS_KEY}:{experiment_id}"
             raw = await self._redis.lrange(key, 0, count - 1)
             return [json.loads(r) for r in raw]
-        except Exception:
+        except (ValueError, OSError):
             logger.exception("get_shadow_results_error")
             return []
 
