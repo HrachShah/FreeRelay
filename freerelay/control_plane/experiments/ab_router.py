@@ -190,7 +190,7 @@ class ExperimentManager:
                 config.name,
             )
             return config.id
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception("create_experiment_error")
             raise
 
@@ -211,7 +211,7 @@ class ExperimentManager:
             )
             logger.info("experiment_started id=%s", experiment_id)
             return True
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception("start_experiment_error")
             return False
 
@@ -229,7 +229,7 @@ class ExperimentManager:
             )
             logger.info("experiment_stopped id=%s reason=%s", experiment_id, reason)
             return True
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception("stop_experiment_error")
             return False
 
@@ -241,7 +241,7 @@ class ExperimentManager:
             if not data:
                 return None
             return ExperimentConfig.from_redis(data)
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception("get_experiment_error")
             return None
 
@@ -263,7 +263,7 @@ class ExperimentManager:
                     if not active_only or config.active:
                         experiments.append(config)
             return experiments
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception("list_experiments_error")
             return []
 
@@ -334,7 +334,7 @@ class ExperimentManager:
                             config.quality_threshold,
                         )
 
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception(
                 "record_outcome_error experiment=%s arm=%s", experiment_id, arm
             )
@@ -353,7 +353,7 @@ class ExperimentManager:
                 total_latency_ms=float(data.get("total_latency_ms", 0)),
                 total_cost=float(data.get("total_cost", 0)),
             )
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception("get_arm_metrics_error")
             return ArmMetrics()
 
@@ -405,6 +405,6 @@ class ExperimentManager:
             deleted = await self._redis.delete(*keys_to_delete)
             logger.info("experiment_deleted id=%s", experiment_id)
             return deleted > 0
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception("delete_experiment_error")
             return False
