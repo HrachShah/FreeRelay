@@ -131,7 +131,7 @@ class TenantManager:
 
         except ValueError:
             raise
-        except Exception:
+        except (TypeError, ValueError, OSError):
             logger.exception("create_tenant_error namespace=%s", policy.namespace)
             raise
 
@@ -143,7 +143,7 @@ class TenantManager:
             if not data:
                 return None
             return TenantPolicy.from_redis(data)
-        except Exception:
+        except (TypeError, ValueError, OSError):
             logger.exception("get_tenant_error namespace=%s", namespace)
             return None
 
@@ -173,7 +173,7 @@ class TenantManager:
                 "tenant_updated namespace=%s fields=%s", namespace, list(updates.keys())
             )
             return True
-        except Exception:
+        except (TypeError, ValueError, OSError):
             logger.exception("update_tenant_error namespace=%s", namespace)
             return False
 
@@ -185,7 +185,7 @@ class TenantManager:
             if deleted:
                 logger.info("tenant_deleted namespace=%s", namespace)
             return bool(deleted)
-        except Exception:
+        except OSError:
             logger.exception("delete_tenant_error namespace=%s", namespace)
             return False
 
