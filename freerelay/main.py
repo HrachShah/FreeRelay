@@ -210,7 +210,7 @@ def create_app() -> FastAPI:
 
         try:
             req = ChatCompletionRequest.model_validate_json(body)
-        except Exception as e:
+        except ValueError as e:
             return JSONResponse(
                 status_code=400,
                 content=ChatCompletionResponse.error_body(f"Invalid request: {e}", 400),
