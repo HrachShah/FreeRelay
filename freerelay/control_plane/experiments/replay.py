@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import redis.asyncio as aioredis
+import asyncio
 
 from freerelay.control_plane.learner.outcome_consumer import OutcomeRecord
 
@@ -148,7 +149,9 @@ class ReplayEngine:
 
             logger.info("replay_loaded_outcomes count=%d", len(records))
 
-        except Exception:
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            raise
+        except (redis.exceptions.RedisError, OSError, json.JSONDecodeError):
             logger.exception("load_outcomes_error")
 
         return records
