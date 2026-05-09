@@ -9,6 +9,7 @@ APScheduler-based scheduling for benchmark runs:
 from __future__ import annotations
 
 import logging
+import asyncio
 from typing import Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -97,6 +98,9 @@ class BenchmarkScheduler:
                     model,
                     result.passed_prompts / max(result.total_prompts, 1),
                 )
+            except asyncio.CancelledError:
+                logger.warning("benchmark_cancelled provider=%s model=%s", provider, model)
+                raise
             except Exception:
                 logger.exception(
                     "full_suite_error provider=%s model=%s", provider, model
@@ -119,6 +123,9 @@ class BenchmarkScheduler:
                     model,
                     result.passed_prompts / max(result.total_prompts, 1),
                 )
+            except asyncio.CancelledError:
+                logger.warning("benchmark_cancelled provider=%s model=%s", provider, model)
+                raise
             except Exception:
                 logger.exception(
                     "spot_check_error provider=%s model=%s", provider, model
