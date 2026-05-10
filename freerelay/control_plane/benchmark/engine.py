@@ -356,7 +356,7 @@ class BenchmarkEngine:
 
             logger.info("benchmark_results_stored key=%s", key)
 
-        except Exception:
+        except redis.asyncio.RedisError:
             logger.exception("store_results_error")
 
     async def get_latest_results(
@@ -371,7 +371,7 @@ class BenchmarkEngine:
         try:
             entries = await self._redis.zrevrange(key, 0, count - 1)
             return [json.loads(e) for e in entries]
-        except Exception:
+        except redis.asyncio.RedisError:
             logger.exception("get_results_error")
             return []
 
@@ -403,6 +403,6 @@ class BenchmarkEngine:
                 comparison, key=lambda x: x.get("mean_score", 0), reverse=True
             )
 
-        except Exception:
+        except redis.asyncio.RedisError:
             logger.exception("provider_comparison_error")
             return []
