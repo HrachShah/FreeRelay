@@ -125,6 +125,8 @@ class Executor:
                 await asyncio.sleep(delay)
                 continue
 
+            except (KeyboardInterrupt, SystemExit):
+                raise
             except Exception as e:
                 last_error = e
                 if circuit:
@@ -156,6 +158,8 @@ class Executor:
             for _name, circuit in circuits.items():
                 await circuit.record_success()
             return response
+        except (KeyboardInterrupt, SystemExit):
+            raise
         except Exception as e:
             # Record failure on all involved circuit breakers
             for _name, circuit in circuits.items():
