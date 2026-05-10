@@ -97,6 +97,8 @@ class BenchmarkScheduler:
                     model,
                     result.passed_prompts / max(result.total_prompts, 1),
                 )
+            except asyncio.CancelledError:
+                raise
             except Exception:
                 logger.exception(
                     "full_suite_error provider=%s model=%s", provider, model
@@ -119,6 +121,8 @@ class BenchmarkScheduler:
                     model,
                     result.passed_prompts / max(result.total_prompts, 1),
                 )
+            except asyncio.CancelledError:
+                raise
             except Exception:
                 logger.exception(
                     "spot_check_error provider=%s model=%s", provider, model
