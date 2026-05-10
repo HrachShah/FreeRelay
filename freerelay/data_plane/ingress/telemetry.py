@@ -160,7 +160,7 @@ def inject_trace_headers(headers: dict[str, str]) -> dict[str, str]:
     try:
         propagator = TraceContextTextMapPropagator()
         propagator.inject(headers)
-    except Exception:
+    except (ValueError, AttributeError, KeyError, TypeError):
         logger.debug("Failed to inject trace headers", exc_info=True)
 
     return headers
