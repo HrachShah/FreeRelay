@@ -156,7 +156,9 @@ async def execute(
         winner.metadata["hedge_delay_ms"] = delay_ms
         return winner
 
-    except Exception as e:
+    except (asyncio.CancelledError, KeyboardInterrupt):
+        raise
+    except (ValueError, TypeError, RuntimeError, KeyError) as e:
         return StepOutput(
             step_id=step.step_id,
             status=StepStatus.FAILED,

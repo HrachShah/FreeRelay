@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import asyncio
+
 from freerelay.data_plane.execution.dag_engine import (
     ExecutionContext,
     StepDefinition,
@@ -88,7 +90,9 @@ async def execute(
             tokens_used=tokens,
         )
 
-    except Exception as e:
+    except (asyncio.CancelledError, KeyboardInterrupt):
+        raise
+    except (ValueError, TypeError, RuntimeError, KeyError) as e:
         return StepOutput(
             step_id=step.step_id,
             status=StepStatus.FAILED,

@@ -122,7 +122,9 @@ def _aes_gcm_decrypt(ciphertext: bytes, key: bytes, nonce: bytes, tag: bytes) ->
         ) from e
     except InvalidTag as exc:
         raise ValueError("Decryption failed: invalid key or corrupted data") from exc
-    except Exception as exc:
+    except ValueError as exc:
+        raise ValueError("Decryption failed: invalid key or corrupted data") from exc
+    except (TypeError, OSError) as exc:
         raise ValueError("Decryption failed: invalid key or corrupted data") from exc
 
 
