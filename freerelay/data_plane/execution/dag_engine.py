@@ -355,7 +355,9 @@ class DAGEngine:
                 workflow.global_timeout_ms,
             )
             trace.status = "timeout"
-        except Exception as e:
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            raise
+        except (ValueError, TypeError, RuntimeError, KeyError, OSError) as e:
             logger.exception("Workflow execution failed: %s", e)
             trace.status = "error"
 
@@ -402,7 +404,7 @@ class DAGEngine:
                 error=f"Step timed out after {step.timeout_ms}ms",
                 latency_ms=(time.monotonic() - start) * 1000,
             )
-        except Exception as e:
+        except (ValueError, TypeError, RuntimeError, KeyError) as e:
             output = StepOutput(
                 step_id=step.step_id,
                 status=StepStatus.FAILED,

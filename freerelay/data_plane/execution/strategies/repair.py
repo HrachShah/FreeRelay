@@ -7,6 +7,7 @@ Repair model receives original request + failed response + failure reason.
 from __future__ import annotations
 
 import time
+import asyncio
 
 from freerelay.data_plane.execution.dag_engine import (
     ExecutionContext,
@@ -118,7 +119,9 @@ async def execute(
             },
         )
 
-    except Exception as e:
+    except (asyncio.CancelledError, KeyboardInterrupt):
+        raise
+    except (ValueError, TypeError, RuntimeError, KeyError) as e:
         return StepOutput(
             step_id=step.step_id,
             status=StepStatus.FAILED,
