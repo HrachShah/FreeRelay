@@ -17,6 +17,7 @@ from enum import StrEnum
 from typing import Any
 
 import redis.asyncio as aioredis
+from redis.asyncio import RedisError
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +199,7 @@ class ExperimentManager:
                 config.name,
             )
             return config.id
-        except Exception:
+        except RedisError:
             logger.exception("create_experiment_error")
             raise
 
@@ -219,7 +220,7 @@ class ExperimentManager:
             )
             logger.info("experiment_started id=%s", experiment_id)
             return True
-        except Exception:
+        except RedisError:
             logger.exception("start_experiment_error")
             return False
 
@@ -237,7 +238,7 @@ class ExperimentManager:
             )
             logger.info("experiment_stopped id=%s reason=%s", experiment_id, reason)
             return True
-        except Exception:
+        except RedisError:
             logger.exception("stop_experiment_error")
             return False
 
@@ -246,11 +247,15 @@ class ExperimentManager:
         key = f"{EXPERIMENT_KEY_PREFIX}:{experiment_id}"
         try:
             data = await self._redis.hgetall(key)
-            if not data:
-                return None
-            return ExperimentConfig.from_redis(data)
-        except Exception:
+        except RedisError:
             logger.exception("get_experiment_error")
+            return None
+        if not data:
+            return None
+        try:
+            return ExperimentConfig.from_redis(data)
+        except (ValueError, TypeError, KeyError):
+            logger.exception("get_experiment_parse_error")
             return None
 
     async def list_experiments(
