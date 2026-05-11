@@ -12,6 +12,7 @@ Production AI gateway with:
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from collections.abc import AsyncIterator
@@ -340,8 +341,8 @@ def create_app() -> FastAPI:
             event = stripe.Webhook.construct_event(
                 payload, sig_header, settings.stripe_webhook_secret
             )  # type: ignore[no-untyped-call]
-        except Exception as e:
-            return Response(content=str(e), status_code=400)
+        except (json.JSONDecodeError, ValueError) as exc:
+            return Response(content=str(exc), status_code=400)
 
         if event["type"] == "checkout.session.completed":
             session = event["data"]["object"]
