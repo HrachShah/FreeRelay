@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import redis.asyncio as aioredis
+from redis.asyncio import RedisError
 
 from freerelay.control_plane.experiments.replay import (
     ReplayEngine,
@@ -246,7 +247,7 @@ class WhatIfSimulator:
             key = f"{SIMULATION_RESULTS_KEY}:{experiment_id}"
             data = json.dumps(result.to_dict())
             await self._redis.set(key, data, ex=86400 * 7)
-        except Exception:
+        except RedisError:
             logger.exception("store_simulation_error")
 
     async def get_simulation_result(self, experiment_id: str) -> dict[str, Any] | None:
@@ -256,7 +257,7 @@ class WhatIfSimulator:
             data = await self._redis.get(key)
             if data:
                 return json.loads(data)
-        except Exception:
+        except RedisError:
             logger.exception("get_simulation_error")
         return None
 
@@ -274,6 +275,6 @@ class WhatIfSimulator:
                 if data:
                     results.append(json.loads(data))
             return results
-        except Exception:
+        except RedisError:
             logger.exception("list_simulations_error")
             return []
