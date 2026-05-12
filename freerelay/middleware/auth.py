@@ -67,7 +67,7 @@ def _verify_token_supabase(token_hash: str) -> dict[str, str] | None:
             _AUTH_CACHE[token_hash] = (user_info, now + _CACHE_TTL)
             return user_info
         return None
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         logger.error("Supabase auth error: %s", e)
         return None
 
