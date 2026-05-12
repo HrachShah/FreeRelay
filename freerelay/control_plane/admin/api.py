@@ -187,7 +187,7 @@ async def create_tenant(
         return {"namespace": namespace, "status": "created"}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
+    except (TypeError, AttributeError) as exc:
         logger.exception("admin_create_tenant_error")
         raise HTTPException(status_code=500, detail=str(exc))
 
