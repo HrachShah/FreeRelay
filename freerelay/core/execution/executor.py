@@ -127,7 +127,7 @@ class Executor:
 
             except (KeyboardInterrupt, SystemExit):
                 raise
-            except Exception as e:
+            except BaseException as e:
                 last_error = e
                 if circuit:
                     await circuit.record_failure(None)
@@ -160,7 +160,7 @@ class Executor:
             return response
         except (KeyboardInterrupt, SystemExit):
             raise
-        except Exception as e:
+        except BaseException as e:
             # Record failure on all involved circuit breakers
             for _name, circuit in circuits.items():
                 status = e.status_code if isinstance(e, ProviderError) else None
