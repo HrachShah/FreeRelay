@@ -60,9 +60,8 @@ async def cancellable_stream(
     try:
         async for line in stream:
             yield line
-    except asyncio.CancelledError:
-        logger.debug("Stream cancelled by client")
+    except (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
         raise
-    except Exception as e:
+    except (ValueError, TypeError, OSError) as e:
         logger.warning("Stream error: %s", str(e)[:100])
         raise

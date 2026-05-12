@@ -202,6 +202,8 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.body()
+        except (OSError, asyncio.CancelledError):
+            raise
         except Exception:
             return JSONResponse(
                 status_code=400,

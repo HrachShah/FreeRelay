@@ -21,9 +21,11 @@ def _eval_condition_context(condition: str, context: dict[str, Any]) -> bool:
         return False
     try:
         return bool(eval(condition, {"__builtins__": {}}, context))
-    except Exception:
+    except (SyntaxError, NameError, TypeError, ValueError, ZeroDivisionError, RecursionError):
         logger.warning("Failed to evaluate condition: %s", condition)
         return False
+    except (KeyboardInterrupt, SystemExit):
+        raise
 
 
 def _eval_condition(

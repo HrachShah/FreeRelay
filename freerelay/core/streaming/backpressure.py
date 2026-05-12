@@ -50,13 +50,14 @@ async def stream_with_backpressure(
         try:
             async for chunk in provider_stream:
                 await queue.put(chunk)
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
             raise
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except Exception as exc:
+        except (ValueError, TypeError, OSError) as exc:
             producer_error = exc
             logger.warning("Provider stream error: %s", str(exc)[:200])
+        except ExceptionGroup as exc:
+            producer_error = exc
+            logger.warning("Provider stream error (ExceptionGroup): %s", str(exc)[:200])
         finally:
             await queue.put(_SENTINEL)
 

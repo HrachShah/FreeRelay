@@ -163,7 +163,7 @@ class RoutingEngine:
             matrix = CapabilityMatrix.model_validate(data)
             logger.info("Loaded capability matrix: %d models", len(matrix.models))
             return matrix
-        except Exception:
+        except (ValueError, TypeError, KeyError) as exc:
             logger.exception("Failed to load capability matrix: %s", path)
             return None
 
@@ -473,7 +473,7 @@ class RoutingEngine:
                                     delta = chunk["choices"][0].get("delta", {})
                                     if "content" in delta and delta["content"]:
                                         full_content.append(delta["content"])
-                            except Exception:
+                            except (ValueError, KeyError):
                                 pass
 
                 elapsed_ms = (time.time() - start_time) * 1000
