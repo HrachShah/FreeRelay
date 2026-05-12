@@ -270,7 +270,9 @@ class ReplayEngine:
             data = await self._redis.hgetall(key)
             if data:
                 return float(data.get("ewma_quality", 0.5))
-        except Exception:
+        except redis.exceptions.RedisError:
+            pass
+        except (ValueError, TypeError):
             pass
         return 0.5  # neutral prior
 
@@ -281,9 +283,11 @@ class ReplayEngine:
             data = await self._redis.hgetall(key)
             if data:
                 return float(data.get("p50_ttft_ms", 100.0))
-        except Exception:
+        except redis.exceptions.RedisError:
             pass
-        return 100.0  # default estimate
+        except (ValueError, TypeError):
+            pass
+        return 100.0  # default p50
 
     def _build_report(
         self,
