@@ -235,7 +235,7 @@ class OutcomeConsumer:
                 "max_id": info.get("max"),
                 "consumers": info.get("consumers", []),
             }
-        except Exception:
+        except redis.asyncio.RedisError:
             logger.exception("pending_info_error")
             return {"pending_count": 0}
 
@@ -285,6 +285,6 @@ class OutcomeConsumer:
                 logger.info("claimed_stale_outcomes count=%d", len(records))
             return records
 
-        except Exception:
+        except (redis.asyncio.RedisError, ValueError, TypeError):
             logger.exception("claim_stale_error")
             return []
