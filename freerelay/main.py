@@ -95,7 +95,7 @@ def create_app() -> FastAPI:
         from fastapi.responses import ORJSONResponse
 
         default_response_class: type[Response] = ORJSONResponse
-    except Exception as exc:
+    except (ImportError, AttributeError) as exc:
         default_response_class = JSONResponse
 
     app = FastAPI(
@@ -203,7 +203,7 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.body()
-        except Exception as exc:
+        except OSError as exc:
             return JSONResponse(
                 status_code=400,
                 content=ChatCompletionResponse.error_body("Invalid JSON body", 400),
@@ -211,7 +211,7 @@ def create_app() -> FastAPI:
 
         try:
             req = ChatCompletionRequest.model_validate_json(body)
-        except Exception as e:
+        except ValueError as e:
             return JSONResponse(
                 status_code=400,
                 content=ChatCompletionResponse.error_body(f"Invalid request: {e}", 400),
@@ -564,7 +564,7 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.json()
-        except Exception as exc:
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
             return JSONResponse(
                 status_code=400,
                 content={"error": "Invalid JSON body"},
