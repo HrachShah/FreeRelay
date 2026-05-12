@@ -14,6 +14,7 @@ from typing import Any
 
 import redis.asyncio as aioredis
 import redis.exceptions
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -153,8 +154,8 @@ class OutcomeConsumer:
         except redis.exceptions.RedisError:
             logger.exception("consumer_group_create_error")
             raise
-        except Exception:
-            # Catch anything else (OS-level socket errors, etc.) as a last resort
+        except (OSError, asyncio.CancelledError):
+            # Catch socket-level errors and cancellation as a last resort
             logger.exception("consumer_group_create_error")
             raise
         self._group_ready = True

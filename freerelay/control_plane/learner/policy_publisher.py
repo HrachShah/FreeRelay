@@ -12,6 +12,7 @@ import logging
 import time
 from typing import Any
 
+import redis
 import redis.asyncio as aioredis
 
 logger = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ class PolicyPublisher:
             )
             return version
 
-        except Exception:
+        except redis.exceptions.RedisError:
             logger.exception("policy_publish_error")
             raise
 
@@ -96,7 +97,7 @@ class PolicyPublisher:
             if raw is None:
                 return None
             return json.loads(raw)
-        except (json.JSONDecodeError, Exception):
+        except (json.JSONDecodeError, OSError):
             logger.exception("policy_load_error")
             return None
 
@@ -105,7 +106,7 @@ class PolicyPublisher:
         try:
             entries = await self._redis.lrange(POLICY_HISTORY_KEY, 0, count - 1)
             return [json.loads(e) for e in entries]
-        except Exception:
+        except (json.JSONDecodeError, OSError):
             logger.exception("policy_history_error")
             return []
 
@@ -143,7 +144,7 @@ class PolicyPublisher:
             versioned_key = f"freerelay:policy:versions:{version}"
             await self._redis.set(versioned_key, raw, ex=86400 * 7)  # 7 day TTL
             logger.debug("policy_version_snapshot version=%s", version)
-        except Exception:
+        except (redis.exceptions.RedisError, OSError):
             logger.exception("snapshot_version_error")
 
     async def subscribe_to_updates(self, callback: Any) -> None:
@@ -162,9 +163,9 @@ class PolicyPublisher:
                     try:
                         policy = json.loads(message["data"])
                         await callback(policy)
-                    except Exception:
+                    except (json.JSONDecodeError, TypeError, KeyError):
                         logger.exception("policy_callback_error")
-        except Exception:
+        except (redis.exceptions.RedisError, OSError):
             logger.exception("policy_subscribe_error")
         finally:
             await pubsub.unsubscribe(POLICY_CHANNEL)
@@ -177,6 +178,6 @@ class PolicyPublisher:
             if deleted:
                 logger.info("policy_deleted")
             return bool(deleted)
-        except Exception:
+        except redis.exceptions.RedisError:
             logger.exception("policy_delete_error")
             return False
