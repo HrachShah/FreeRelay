@@ -257,7 +257,7 @@ class ReplayEngine:
                 quality_delta=cf_quality - original_quality,
             )
 
-        except Exception:
+        except json.JSONDecodeError:
             logger.exception("counterfactual_error request=%s", outcome.request_id)
             return None
 
@@ -342,7 +342,7 @@ class ReplayEngine:
             key = f"{REPLAY_RESULTS_KEY}:{experiment_id}"
             data = json.dumps(report.to_dict())
             await self._redis.set(key, data, ex=86400 * 7)  # 7 day TTL
-        except Exception:
+        except (redis.exceptions.RedisError, OSError, TypeError):
             logger.exception("store_report_error")
 
     async def get_report(self, experiment_id: str) -> dict[str, Any] | None:
@@ -352,6 +352,6 @@ class ReplayEngine:
             data = await self._redis.get(key)
             if data:
                 return json.loads(data)
-        except Exception:
+        except (redis.exceptions.RedisError, ValueError, OSError):
             logger.exception("get_report_error")
         return None
