@@ -190,7 +190,10 @@ class ExperimentManager:
                 config.name,
             )
             return config.id
-        except Exception:
+        except redis.ResponseError as e:
+            logger.exception("create_experiment_error")
+            raise
+        except redis.ConnectionError:
             logger.exception("create_experiment_error")
             raise
 
