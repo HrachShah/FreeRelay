@@ -97,7 +97,7 @@ class BenchmarkScheduler:
                     model,
                     result.passed_prompts / max(result.total_prompts, 1),
                 )
-            except Exception:
+            except (TypeError, AttributeError, RuntimeError):
                 logger.exception(
                     "full_suite_error provider=%s model=%s", provider, model
                 )
