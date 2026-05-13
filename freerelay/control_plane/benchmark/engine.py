@@ -356,7 +356,7 @@ class BenchmarkEngine:
 
             logger.info("benchmark_results_stored key=%s", key)
 
-        except Exception:
+        except redis.asyncio.ResponseError:
             logger.exception("store_results_error")
 
     async def get_latest_results(
