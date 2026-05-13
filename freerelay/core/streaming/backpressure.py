@@ -52,6 +52,9 @@ async def stream_with_backpressure(
                 await queue.put(chunk)
         except asyncio.CancelledError:
             raise
+        except (OSError, ValueError, StopIteration, RuntimeError) as exc:
+            producer_error = exc
+            logger.warning("Provider stream error: %s", str(exc)[:200])
         except Exception as exc:
             producer_error = exc
             logger.warning("Provider stream error: %s", str(exc)[:200])
