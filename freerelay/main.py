@@ -94,7 +94,7 @@ def create_app() -> FastAPI:
         from fastapi.responses import ORJSONResponse
 
         default_response_class: type[Response] = ORJSONResponse
-    except Exception:
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError):
         default_response_class = JSONResponse
 
     app = FastAPI(
@@ -204,7 +204,7 @@ def create_app() -> FastAPI:
             body = await request.body()
         except (OSError, asyncio.CancelledError):
             raise
-        except Exception:
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
             return JSONResponse(
                 status_code=400,
                 content=ChatCompletionResponse.error_body("Invalid JSON body", 400),
@@ -292,7 +292,7 @@ def create_app() -> FastAPI:
                 )
                 user_data: Any = user_res.data[0]
                 user_id = str(user_data["id"])
-            except Exception:
+            except (json.JSONDecodeError, UnicodeDecodeError, OSError):
                 # User probably exists. In a production system, we would 
                 # trigger an email verification or login flow here.
                 # For security, we DO NOT return a new key for an existing email.
@@ -307,7 +307,7 @@ def create_app() -> FastAPI:
             ).execute()
 
             return RegisterResponse(api_key=api_key)
-        except Exception as e:
+        except OSError as e:
             logger.exception("Registration failed")
             return JSONResponse(
                 status_code=500,
@@ -321,7 +321,7 @@ def create_app() -> FastAPI:
         try:
             session = create_checkout_session(req.email, req.price_id)
             return CheckoutResponse(url=session.url)
-        except Exception as e:
+        except OSError as e:
             logger.exception("Stripe session creation failed")
             return JSONResponse(
                 status_code=500,
@@ -565,7 +565,7 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.json()
-        except Exception:
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
             return JSONResponse(
                 status_code=400,
                 content={"error": "Invalid JSON body"},
@@ -591,7 +591,7 @@ def create_app() -> FastAPI:
                 status_code=400,
                 content={"error": str(e)},
             )
-        except Exception as e:
+        except OSError as e:
             return JSONResponse(
                 status_code=500,
                 content={"error": f"CLI backend error: {str(e)[:200]}"},
