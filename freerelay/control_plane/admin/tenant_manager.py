@@ -131,7 +131,7 @@ class TenantManager:
 
         except ValueError:
             raise
-        except Exception:
+        except (TypeError, OSError):
             logger.exception("create_tenant_error namespace=%s", policy.namespace)
             raise
 
@@ -143,7 +143,7 @@ class TenantManager:
             if not data:
                 return None
             return TenantPolicy.from_redis(data)
-        except Exception:
+        except (ValueError, TypeError, OSError):
             logger.exception("get_tenant_error namespace=%s", namespace)
             return None
 
