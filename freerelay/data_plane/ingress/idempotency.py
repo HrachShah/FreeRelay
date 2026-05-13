@@ -69,7 +69,7 @@ class IdempotencyStore:
         if self._redis is not None:
             try:
                 return await self._check_redis(request_id)
-            except Exception:
+            except (redis.ConnectionError, redis.ResponseError, OSError):
                 logger.exception("Redis idempotency check failed, using fallback")
                 return self._check_memory(request_id)
 
@@ -138,7 +138,7 @@ class IdempotencyStore:
         if self._redis is not None:
             try:
                 return await self._store_redis(request_id, data)
-            except Exception:
+            except (redis.ConnectionError, redis.ResponseError, OSError):
                 logger.exception("Redis idempotency store failed, using fallback")
                 return self._store_memory(request_id, data)
 
