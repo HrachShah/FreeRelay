@@ -233,7 +233,7 @@ class CapabilityRegistry:
             if not data:
                 return None
             return CapabilityRecord.from_redis(data)
-        except Exception:
+        except (redis.ResponseError, redis.ConnectionError, OSError):
             logger.exception("get_record_error provider=%s model=%s", provider, model)
             return None
 
@@ -248,7 +248,7 @@ class CapabilityRegistry:
             logger.debug(
                 "capability_updated provider=%s model=%s", record.provider, record.model
             )
-        except Exception:
+        except (redis.ResponseError, redis.ConnectionError, OSError):
             logger.exception(
                 "update_record_error provider=%s model=%s",
                 record.provider,
@@ -269,7 +269,7 @@ class CapabilityRegistry:
                 if data:
                     records.append(CapabilityRecord.from_redis(data))
             return records
-        except Exception:
+        except (redis.ResponseError, redis.ConnectionError, OSError):
             logger.exception("list_records_error")
             return []
 
@@ -283,7 +283,7 @@ class CapabilityRegistry:
             if deleted:
                 logger.info("capability_deleted provider=%s model=%s", provider, model)
             return bool(deleted)
-        except Exception:
+        except (redis.ResponseError, redis.ConnectionError, OSError):
             logger.exception(
                 "delete_record_error provider=%s model=%s", provider, model
             )
@@ -331,7 +331,7 @@ class CapabilityRegistry:
                 await self.refresh_cache()
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except (redis.ResponseError, redis.ConnectionError, OSError):
                 logger.exception("cache_refresh_error")
                 await asyncio.sleep(CACHE_REFRESH_INTERVAL)
 
@@ -363,5 +363,5 @@ class CapabilityRegistry:
                 field,
                 value,
             )
-        except Exception:
+        except (redis.ResponseError, redis.ConnectionError, OSError):
             logger.exception("set_degradation_error")
