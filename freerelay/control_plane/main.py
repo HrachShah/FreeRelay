@@ -142,7 +142,7 @@ class ControlPlane:
                     await self._redis.xack(
                         "freerelay:outcomes", "control-plane-learner", msg_id
                     )
-        except Exception:
+        except (asyncio.CancelledError, redis.ResponseError, redis.ConnectionError, OSError):
             logger.exception("consume_outcomes_error")
         return outcomes
 
@@ -272,7 +272,7 @@ class ControlPlane:
                 logger.info(
                     "policy_published version=%s", policy.get("version", "unknown")
                 )
-        except Exception:
+        except (OSError, ValueError, RuntimeError):
             logger.exception("policy_publish_error")
 
 
