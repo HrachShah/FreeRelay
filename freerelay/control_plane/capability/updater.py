@@ -13,6 +13,7 @@ import time
 from typing import Any
 
 import redis.asyncio as aioredis
+import redis
 
 from freerelay.control_plane.learner.outcome_consumer import OutcomeRecord
 
@@ -59,7 +60,7 @@ class CapabilityUpdater:
                     provider, model, outcome.task_family, outcome.judge_score
                 )
 
-        except Exception:
+        except (redis.ResponseError, redis.ConnectionError, TypeError, ValueError):
             logger.exception(
                 "process_outcome_error provider=%s model=%s", provider, model
             )
