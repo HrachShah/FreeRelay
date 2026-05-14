@@ -79,7 +79,7 @@ async def execute(
                     model=model,
                     latency_ms=(time.monotonic() - start) * 1000,
                 )
-            except Exception as e:
+            except (ValueError, TypeError, RuntimeError) as e:
                 return StepOutput(
                     step_id=step.step_id,
                     status=StepStatus.FAILED,

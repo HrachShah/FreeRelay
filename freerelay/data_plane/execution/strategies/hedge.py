@@ -163,10 +163,13 @@ async def execute(
         winner.metadata["hedge_delay_ms"] = delay_ms
         return winner
 
-    except Exception as e:
+    except (ValueError, TypeError, RuntimeError) as e:
         return StepOutput(
             step_id=step.step_id,
             status=StepStatus.FAILED,
             error=str(e),
             latency_ms=(time.monotonic() - start) * 1000,
         )
+
+
+def _estimate_quality
