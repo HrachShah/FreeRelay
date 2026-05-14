@@ -131,7 +131,7 @@ async def execute(
                 if result.status == StepStatus.COMPLETED:
                     winner = result
                     break
-            except Exception:
+            except (asyncio.CancelledError, KeyError, ValueError):
                 continue
 
         # Cancel pending tasks
@@ -148,7 +148,7 @@ async def execute(
                     r = task.result()
                     if r.error:
                         errors.append(r.error)
-                except Exception as e:
+                except (asyncio.CancelledError, KeyError, ValueError, AttributeError) as e:
                     errors.append(str(e))
 
             return StepOutput(
