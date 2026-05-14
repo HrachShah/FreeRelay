@@ -324,7 +324,7 @@ def ask(
                     console.print(f"[red]Error: {response.error.message}[/red]")
                 else:
                     console.print(f"[red]Unexpected response format: {response}[/red]")
-            except Exception as e:
+            except (TypeError, ValueError, RuntimeError) as e:
                 console.print(f"[red]Error: {str(e)}[/red]")
             finally:
                 # Cleanup shared HTTP client
