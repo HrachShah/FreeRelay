@@ -125,10 +125,10 @@ class Executor:
                 await asyncio.sleep(delay)
                 continue
 
-            except Exception as e:
+            except (asyncio.CancelledError, ProviderError) as e:
                 last_error = e
                 if circuit:
-                    await circuit.record_failure(None)
+                    await circuit.record_failure(getattr(e, 'status_code', None))
                 raise
 
         raise last_error or ProviderError("All retries exhausted")
@@ -156,7 +156,7 @@ class Executor:
             for _name, circuit in circuits.items():
                 await circuit.record_success()
             return response
-        except Exception as e:
+        except (ProviderError, ValueError, asyncio.CancelledError) as e:
             # Record failure on all involved circuit breakers
             for _name, circuit in circuits.items():
                 status = e.status_code if isinstance(e, ProviderError) else None
