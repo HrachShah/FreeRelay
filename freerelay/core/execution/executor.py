@@ -125,7 +125,7 @@ class Executor:
                 await asyncio.sleep(delay)
                 continue
 
-            except Exception as e:
+            except (TypeError, ValueError, KeyError, AttributeError) as e:
                 last_error = e
                 if circuit:
                     await circuit.record_failure(None)
