@@ -137,7 +137,7 @@ class PolicyBus:
                     for handler in self._handlers[topic]:
                         try:
                             await handler(message["data"])
-                        except Exception:
+                        except (TypeError, AttributeError):
                             logger.exception("Handler error for %s", topic)
 
     @staticmethod

@@ -199,7 +199,7 @@ class WhatIfSimulator:
             try:
                 result = await self.simulate(scenario)
                 results.append(result)
-            except Exception:
+            except (asyncio.CancelledError, ValueError, OSError):
                 logger.exception("compare_scenario_error scenario=%s", scenario.name)
 
         # Sort by quality improvement
@@ -246,7 +246,7 @@ class WhatIfSimulator:
             key = f"{SIMULATION_RESULTS_KEY}:{experiment_id}"
             data = json.dumps(result.to_dict())
             await self._redis.set(key, data, ex=86400 * 7)
-        except Exception:
+        except (OSError, ValueError):
             logger.exception("store_simulation_error")
 
     async def get_simulation_result(self, experiment_id: str) -> dict[str, Any] | None:
@@ -256,7 +256,7 @@ class WhatIfSimulator:
             data = await self._redis.get(key)
             if data:
                 return json.loads(data)
-        except Exception:
+        except (OSError, ValueError):
             logger.exception("get_simulation_error")
         return None
 
@@ -274,6 +274,6 @@ class WhatIfSimulator:
                 if data:
                     results.append(json.loads(data))
             return results
-        except Exception:
+        except (OSError, ValueError):
             logger.exception("list_simulations_error")
             return []
