@@ -136,7 +136,7 @@ class OutcomeConsumer:
             logger.info(
                 "consumer_group_created stream=%s group=%s", self._stream, self._group
             )
-        except Exception as exc:
+        except (aioredis.ResponseError, aioredis.ClientError) as exc:
             # BUSYGROUP means the group already exists — that's fine
             if "BUSYGROUP" in str(exc):
                 logger.debug(
