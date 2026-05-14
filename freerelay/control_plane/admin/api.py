@@ -185,7 +185,7 @@ async def create_tenant(
     try:
         namespace = await _tenant_manager.create_tenant(policy)
         return {"namespace": namespace, "status": "created"}
-    except ValueError as exc:
+    except (ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         logger.exception("admin_create_tenant_error")
