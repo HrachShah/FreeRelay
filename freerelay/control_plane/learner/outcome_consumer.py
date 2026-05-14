@@ -177,7 +177,7 @@ class OutcomeConsumer:
                 try:
                     record = OutcomeRecord.from_stream(msg_id, fields)
                     records.append(record)
-                except Exception:
+                except (RuntimeError, MemoryError):
                     logger.exception("consume_batch_parse_error id=%s", msg_id)
 
         if records:
