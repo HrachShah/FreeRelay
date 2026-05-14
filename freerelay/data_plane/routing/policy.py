@@ -65,7 +65,7 @@ class Condition:
             if op_func is None:
                 return False
             return op_func(actual, self.value)
-        except Exception:
+        except (TypeError, AttributeError, KeyError):
             return False
 
     def _resolve_field(self, context: dict[str, Any], path: str) -> Any:
@@ -177,7 +177,7 @@ class PolicyDSL:
             logger.info("Loaded %d routing policies", len(self._policies))
             return self._policies
 
-        except Exception:
+        except yaml.YAMLError:
             logger.exception("Failed to parse policy YAML")
             return []
 
@@ -189,7 +189,7 @@ class PolicyDSL:
         except FileNotFoundError:
             logger.warning("Policy file not found: %s", path)
             return []
-        except Exception:
+        except (yaml.YAMLError, OSError):
             logger.exception("Failed to load policy file: %s", path)
             return []
 
