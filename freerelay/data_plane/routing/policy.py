@@ -232,7 +232,7 @@ class PolicyDSL:
                 condition_mode=condition_mode,
                 action=action,
             )
-        except Exception:
+        except (ValueError, KeyError, TypeError):
             logger.exception("Failed to parse policy: %s", raw)
             return None
 
