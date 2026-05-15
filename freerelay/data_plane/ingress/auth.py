@@ -101,7 +101,7 @@ class AuthProvider:
                     result.decode("utf-8") if isinstance(result, bytes) else str(result)
                 )
             return None
-        except Exception:
+        except (ConnectionError, TimeoutError):
             logger.exception("Redis key lookup failed for hash %s", key_hash[:8])
             return None
 

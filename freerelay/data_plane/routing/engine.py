@@ -88,7 +88,7 @@ class RoutingEngine:
                     }
                     self._capability_cache[key] = caps
                     return caps
-            except Exception:
+            except (ConnectionError, TimeoutError):
                 logger.debug("Failed to load capabilities for %s", key)
 
         return {}
