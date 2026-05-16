@@ -148,7 +148,7 @@ class ReplayEngine:
 
             logger.info("replay_loaded_outcomes count=%d", len(records))
 
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception("load_outcomes_error")
 
         return records
@@ -267,7 +267,7 @@ class ReplayEngine:
             data = await self._redis.hgetall(key)
             if data:
                 return float(data.get("ewma_quality", 0.5))
-        except Exception:
+        except (ValueError, redis.ConnectionError):
             pass
         return 0.5  # neutral prior
 
@@ -278,7 +278,7 @@ class ReplayEngine:
             data = await self._redis.hgetall(key)
             if data:
                 return float(data.get("p50_ttft_ms", 100.0))
-        except Exception:
+        except (ValueError, redis.ConnectionError):
             pass
         return 100.0  # default estimate
 
@@ -335,7 +335,7 @@ class ReplayEngine:
             key = f"{REPLAY_RESULTS_KEY}:{experiment_id}"
             data = json.dumps(report.to_dict())
             await self._redis.set(key, data, ex=86400 * 7)  # 7 day TTL
-        except Exception:
+        except (ValueError, TypeError, redis.ConnectionError):
             logger.exception("store_report_error")
 
     async def get_report(self, experiment_id: str) -> dict[str, Any] | None:
@@ -345,6 +345,6 @@ class ReplayEngine:
             data = await self._redis.get(key)
             if data:
                 return json.loads(data)
-        except Exception:
+        except (ValueError, TypeError, redis.ConnectionError):
             logger.exception("get_report_error")
         return None
