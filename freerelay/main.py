@@ -94,7 +94,7 @@ def create_app() -> FastAPI:
         from fastapi.responses import ORJSONResponse
 
         default_response_class: type[Response] = ORJSONResponse
-    except Exception:
+    except ImportError:
         default_response_class = JSONResponse
 
     app = FastAPI(
@@ -202,7 +202,7 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.body()
-        except Exception:
+        except (OSError, asyncio.InvalidStateError):
             return JSONResponse(
                 status_code=400,
                 content=ChatCompletionResponse.error_body("Invalid JSON body", 400),
@@ -210,7 +210,7 @@ def create_app() -> FastAPI:
 
         try:
             req = ChatCompletionRequest.model_validate_json(body)
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             return JSONResponse(
                 status_code=400,
                 content=ChatCompletionResponse.error_body(f"Invalid request: {e}", 400),
