@@ -246,6 +246,10 @@ class BenchmarkEngine:
 
         except TimeoutError:
             error = f"Timeout after {prompt.timeout_s}s"
+        except asyncio.CancelledError:
+            raise  # CancelledError is BaseException — re-raise so callers can handle it
+        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as exc:
+            error = f"Redis error: {exc}"
         except Exception as exc:
             error = str(exc)
 
