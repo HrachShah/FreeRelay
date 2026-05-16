@@ -175,7 +175,7 @@ class ShadowRouter:
         except TimeoutError:
             error = f"Shadow timeout after {timeout_s}s"
             shadow_latency_ms = timeout_s * 1000
-        except Exception as exc:
+        except (ValueError, TypeError, redis.ConnectionError) as exc:
             error = f"Shadow error: {exc}"
             shadow_latency_ms = (time.monotonic() - start) * 1000
 

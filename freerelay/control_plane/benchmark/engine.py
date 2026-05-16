@@ -244,9 +244,7 @@ class BenchmarkEngine:
                 ttft_ms = 50.0
                 tokens_out = len(output.split())
 
-        except TimeoutError:
-            error = f"Timeout after {prompt.timeout_s}s"
-        except Exception as exc:
+        except (ValueError, TypeError, redis.ConnectionError) as exc:
             error = str(exc)
 
         end_time = time.monotonic()
@@ -377,7 +375,7 @@ class BenchmarkEngine:
                 except (json.JSONDecodeError, TypeError):
                     logger.warning("get_results: skipping malformed entry for %s:%s:%s", provider, model, suite_name)
             return results
-        except Exception:
+        except (ValueError, TypeError, redis.ConnectionError):
             logger.exception("get_results_error")
             return []
 
@@ -413,6 +411,6 @@ class BenchmarkEngine:
                 comparison, key=lambda x: x.get("mean_score", 0), reverse=True
             )
 
-        except Exception:
+        except (ValueError, TypeError, redis.ConnectionError):
             logger.exception("provider_comparison_error")
             return []

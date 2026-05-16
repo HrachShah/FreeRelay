@@ -200,7 +200,7 @@ class WhatIfSimulator:
             try:
                 result = await self.simulate(scenario)
                 results.append(result)
-            except Exception:
+            except (ValueError, TypeError):
                 logger.exception("compare_scenario_error scenario=%s", scenario.name)
 
         # Sort by quality improvement
