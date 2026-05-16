@@ -185,7 +185,7 @@ def status() -> None:
     try:
         resp = httpx.get("http://localhost:8000/v1/stats", timeout=5)
         data = resp.json()
-    except Exception:
+    except httpx.ConnectError:
         console.print("[red]✗ FreeRelay not running. Start with: freerelay[/red]")
         raise typer.Exit(1) from None
 
@@ -242,7 +242,7 @@ def benchmark(
                     )
                     if r.status_code == 200:
                         latencies.append((time.time() - start) * 1000)
-                except Exception:
+                except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPError):
                     pass
 
             await asyncio.gather(*[send() for _ in range(requests)])
