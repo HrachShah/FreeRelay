@@ -89,7 +89,7 @@ class ProviderRegistry:
 
                     self._loaded_modules[module_name] = str(py_file)
 
-            except Exception as e:
+            except (ImportError, SyntaxError, AttributeError) as e:
                 logger.error("Failed to load plugin %s: %s", py_file.name, e)
 
         return loaded
