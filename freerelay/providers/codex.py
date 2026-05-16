@@ -224,6 +224,7 @@ def get_codex_token_status() -> dict[str, object]:
     # Try to decode JWT to check expiry
     try:
         import base64
+        import binascii
 
         parts = token.split(".")
         if len(parts) == 2:
@@ -244,7 +245,7 @@ def get_codex_token_status() -> dict[str, object]:
                     else "Token expired. Re-authenticate with 'openclaw configure'."
                 ),
             }
-    except Exception:
+    except (binascii.Error, ValueError, IndexError, KeyError):
         pass
 
     return {
