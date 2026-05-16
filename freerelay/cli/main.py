@@ -185,8 +185,11 @@ def status() -> None:
     try:
         resp = httpx.get("http://localhost:8000/v1/stats", timeout=5)
         data = resp.json()
-    except Exception:
+    except httpx.ConnectError:
         console.print("[red]✗ FreeRelay not running. Start with: freerelay[/red]")
+        raise typer.Exit(1) from None
+    except httpx.TimeoutException:
+        console.print("[red]✗ FreeRelay stats endpoint timed out.[/red]")
         raise typer.Exit(1) from None
 
     from rich.table import Table
