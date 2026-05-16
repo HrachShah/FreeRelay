@@ -131,7 +131,7 @@ class TenantManager:
 
         except ValueError:
             raise
-        except Exception:
+        except (redis.ResponseError, redis.RedisError, OSError):
             logger.exception("create_tenant_error namespace=%s", policy.namespace)
             raise
 
