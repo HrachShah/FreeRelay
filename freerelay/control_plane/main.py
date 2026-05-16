@@ -116,7 +116,7 @@ class ControlPlane:
 
         except asyncio.CancelledError:
             raise
-        except Exception:
+        except (ValueError, TypeError, redis.ConnectionError):
             logger.exception("tick_error")
         finally:
             # Sleep remainder of tick interval
@@ -202,7 +202,7 @@ class ControlPlane:
                     },
                 )
 
-            except Exception:
+            except (ValueError, TypeError):
                 logger.exception(
                     "bandit_update_error provider=%s", outcome.get("provider_chosen")
                 )
@@ -257,7 +257,7 @@ class ControlPlane:
                         "1",
                     )
 
-            except Exception:
+            except (ValueError, TypeError):
                 logger.exception("anomaly_detection_error key=%s", key)
 
     async def _publish_policy(self) -> None:
@@ -275,7 +275,7 @@ class ControlPlane:
                 logger.info(
                     "policy_published version=%s", policy.get("version", "unknown")
                 )
-        except Exception:
+        except (ValueError, TypeError, redis.ConnectionError):
             logger.exception("policy_publish_error")
 
 
