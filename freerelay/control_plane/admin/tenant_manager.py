@@ -143,7 +143,7 @@ class TenantManager:
             if not data:
                 return None
             return TenantPolicy.from_redis(data)
-        except Exception:
+        except (KeyError, TypeError, ValueError):
             logger.exception("get_tenant_error namespace=%s", namespace)
             return None
 
