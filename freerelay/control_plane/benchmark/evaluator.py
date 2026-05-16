@@ -360,7 +360,7 @@ def evaluate(
 
     try:
         return evaluator()
-    except Exception as exc:
+    except (TypeError, ValueError, RuntimeError) as exc:
         logger.exception("evaluation_error type=%s", benchmark_type)
         return ScoreResult(score=0.0, passed=False, error=str(exc))
 

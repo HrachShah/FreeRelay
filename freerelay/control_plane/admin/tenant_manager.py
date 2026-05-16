@@ -202,7 +202,7 @@ class TenantManager:
                     if not active_only or tenant.active:
                         tenants.append(tenant)
             return sorted(tenants, key=lambda t: t.namespace)
-        except Exception:
+        except (redis.ConnectionError, redis.ResponseError):
             logger.exception("list_tenants_error")
             return []
 

@@ -14,6 +14,7 @@ from typing import Any
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
+import redis
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +120,7 @@ class BenchmarkScheduler:
                     model,
                     result.passed_prompts / max(result.total_prompts, 1),
                 )
-            except Exception:
+            except (ValueError, TypeError, redis.ConnectionError):
                 logger.exception(
                     "spot_check_error provider=%s model=%s", provider, model
                 )
