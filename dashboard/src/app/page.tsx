@@ -94,15 +94,16 @@ export default function DashboardPage() {
     // Fetch analytics
     fetch(`${apiUrl}/v1/analytics?days=${days}`)
       .then((res) => {
-        if (!res.ok) throw new Error("API error")
+        if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`)
         return res.json()
       })
       .then((json) => {
         setData(json)
-        setLoading(false)
       })
       .catch((err) => {
         console.error("Failed to fetch analytics:", err)
+      })
+      .finally(() => {
         setLoading(false)
       })
   }, [days, refreshKey])
