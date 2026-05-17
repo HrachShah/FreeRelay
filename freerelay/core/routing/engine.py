@@ -413,7 +413,7 @@ class RoutingEngine:
                 last_error = e
                 continue
 
-            except Exception as e:
+            except (AttributeError, TypeError, OSError) as e:
                 await slot.circuit.record_failure(None)
                 slot.error_count += 1
                 logger.exception("%s unexpected error: %s", provider.name, e)
