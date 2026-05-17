@@ -131,13 +131,13 @@ async def execute(
                 if result.status == StepStatus.COMPLETED:
                     winner = result
                     break
-            except Exception:
+            except (asyncio.CancelledError, asyncio.InvalidStateError):
                 continue
 
         # Cancel pending tasks
         for task in pending:
             task.cancel()
-            with contextlib.suppress(asyncio.CancelledError, Exception):
+            with contextlib.suppress(asyncio.CancelledError, OSError):
                 await task
 
         if winner is None:
@@ -148,7 +148,7 @@ async def execute(
                     r = task.result()
                     if r.error:
                         errors.append(r.error)
-                except Exception as e:
+                except (asyncio.CancelledError, asyncio.InvalidStateError, OSError) as e:
                     errors.append(str(e))
 
             return StepOutput(

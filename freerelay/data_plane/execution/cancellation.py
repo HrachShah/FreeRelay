@@ -112,7 +112,7 @@ class CancellableRequest:
             if self._httpx_request is not None and self._httpx_client is not None:
                 try:
                     await self._httpx_client.cancel_request(self._httpx_request)
-                except Exception:
+                except (asyncio.CancelledError, OSError):
                     logger.debug(
                         "Failed to cancel httpx request %s",
                         self._state.request_id,
