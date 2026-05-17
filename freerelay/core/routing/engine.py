@@ -397,23 +397,16 @@ class RoutingEngine:
                 )
                 return response
 
-            except RateLimitError:
-                await slot.circuit.record_failure(429)
-                slot.error_count += 1
-                logger.warning("%s rate limited", provider.name)
-                last_error = RateLimitError(provider_name=provider.name)
-                continue
-
-            except ProviderError as e:
-                await slot.circuit.record_failure(e.status_code)
+            except (RateLimitError, ProviderError) as e:
+                await slot.circuit.record_failure(getattr(e, 'status_code', None))
                 slot.error_count += 1
                 logger.warning(
-                    "%s error %d: %s", provider.name, e.status_code, str(e)[:100]
+                    "%s error %d: %s", provider.name, getattr(e, 'status_code', 0), str(e)[:100]
                 )
                 last_error = e
                 continue
 
-            except Exception as e:
+            except (TypeError, ValueError, AttributeError, OSError) as e:
                 await slot.circuit.record_failure(None)
                 slot.error_count += 1
                 logger.exception("%s unexpected error: %s", provider.name, e)
@@ -473,7 +466,7 @@ class RoutingEngine:
                                     delta = chunk["choices"][0].get("delta", {})
                                     if "content" in delta and delta["content"]:
                                         full_content.append(delta["content"])
-                            except Exception:
+                            except (ValueError, TypeError):
                                 pass
 
                 elapsed_ms = (time.time() - start_time) * 1000
