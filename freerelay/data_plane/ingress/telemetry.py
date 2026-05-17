@@ -122,7 +122,7 @@ def create_request_span(
         try:
             yield span
             span.set_status(Status(StatusCode.OK))
-        except Exception as exc:
+        except (ValueError, TypeError, OSError) as exc:
             span.set_status(Status(StatusCode.ERROR, str(exc)))
             span.record_exception(exc)
             raise
