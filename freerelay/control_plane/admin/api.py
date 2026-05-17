@@ -467,7 +467,7 @@ async def trigger_benchmark(
             "mode": "spot_check" if req.spot_check else "full_suite",
             "status": "triggered",
         }
-    except Exception as exc:
+    except (TypeError, AttributeError, RuntimeError) as exc:
         logger.exception("admin_trigger_benchmark_error")
         raise HTTPException(status_code=500, detail=str(exc))
 
