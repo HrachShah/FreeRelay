@@ -473,7 +473,7 @@ class RoutingEngine:
                                     delta = chunk["choices"][0].get("delta", {})
                                     if "content" in delta and delta["content"]:
                                         full_content.append(delta["content"])
-                            except Exception:
+                            except ValueError:
                                 pass
 
                 elapsed_ms = (time.time() - start_time) * 1000
