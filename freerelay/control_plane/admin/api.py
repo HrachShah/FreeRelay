@@ -17,6 +17,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 from freerelay.config.settings import get_settings
+import redis
 
 logger = logging.getLogger(__name__)
 
@@ -304,9 +305,12 @@ async def update_policy(
         version = await _policy_publisher.publish(req.policy, reason=req.reason)
         await _policy_publisher.snapshot_version(version)
         return {"version": version, "status": "published"}
-    except Exception as exc:
+    except redis.ResponseError as exc:
         logger.exception("admin_update_policy_error")
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=f"policy publish failed: {exc}")
+    except redis.ConnectionError as exc:
+        logger.exception("admin_update_policy_error")
+        raise HTTPException(status_code=503, detail=f"redis unavailable: {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -345,9 +349,14 @@ async def create_experiment(
     try:
         exp_id = await _experiment_manager.create_experiment(config)
         return {"experiment_id": exp_id, "status": "created"}
-    except Exception as exc:
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except redis.ResponseError as exc:
         logger.exception("admin_create_experiment_error")
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=f"experiment creation failed: {exc}")
+    except redis.ConnectionError as exc:
+        logger.exception("admin_create_experiment_error")
+        raise HTTPException(status_code=503, detail=f"redis unavailable: {exc}")
 
 
 @router.get("/experiments")
