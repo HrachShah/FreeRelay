@@ -187,7 +187,7 @@ def compile_workflow(yaml_str: str) -> WorkflowDefinition:
             global_timeout_ms=data.get("global_timeout_ms", 120000),
             metadata=data.get("metadata", {}),
         )
-    except Exception:
+    except (yaml.YAMLError, ValueError, OSError):
         logger.exception("Failed to compile workflow")
         return WorkflowDefinition(name="error")
 
@@ -258,7 +258,7 @@ def _evaluate_condition(condition: str, context: dict[str, Any]) -> bool:
             expected = parts[1].strip().strip("'\"")
             actual = _resolve_path(field_path, context)
             return expected in str(actual) if actual else False
-    except Exception:
+    except (ValueError, KeyError):
         logger.debug("Condition evaluation failed: %s", condition)
     return True  # Default to true on parse failure
 
@@ -352,7 +352,7 @@ class DAGEngine:
                 workflow.global_timeout_ms,
             )
             trace.status = "timeout"
-        except Exception as e:
+        except (OSError, TypeError) as e:
             logger.exception("Workflow execution failed: %s", e)
             trace.status = "error"
 
