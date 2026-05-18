@@ -40,6 +40,16 @@ DEFAULT_EWMA_QUALITY = 0.5
 PRIOR_N_PULLS = 0
 
 
+def _safe_float(value: str | None, default: float) -> float:
+    """Safely convert a Redis string value to float, returning default on error."""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+
 @dataclass
 class BanditArm:
     """State for a single bandit arm (provider + model + task_family)."""
@@ -78,13 +88,13 @@ class BanditArm:
             provider=provider,
             model=model,
             task_family=task_family,
-            mean_quality=float(data.get("mean_quality", DEFAULT_MEAN_QUALITY)),
-            n_pulls=int(data.get("n_pulls", 0)),
-            sum_quality=float(data.get("sum_quality", 0.0)),
-            ewma_quality=float(data.get("ewma_quality", DEFAULT_EWMA_QUALITY)),
-            variance=float(data.get("variance", 0.0)),
-            m2=float(data.get("m2", 0.0)),
-            last_updated_ts=float(data.get("last_updated_ts", time.time())),
+            mean_quality=_safe_float(data.get("mean_quality"), DEFAULT_MEAN_QUALITY),
+            n_pulls=int(data.get("n_pulls") or 0),
+            sum_quality=_safe_float(data.get("sum_quality"), 0.0),
+            ewma_quality=_safe_float(data.get("ewma_quality"), DEFAULT_EWMA_QUALITY),
+            variance=_safe_float(data.get("variance"), 0.0),
+            m2=_safe_float(data.get("m2"), 0.0),
+            last_updated_ts=_safe_float(data.get("last_updated_ts"), time.time()),
         )
 
     def to_redis(self) -> dict[str, str]:
