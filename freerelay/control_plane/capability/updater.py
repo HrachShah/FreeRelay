@@ -200,8 +200,16 @@ class CapabilityUpdater:
                 task_fam = q_key.split(":")[-1]
                 raw_scores = await self._redis.lrange(q_key, 0, -1)
                 if raw_scores:
-                    scores = [float(s) for s in raw_scores]
-                    quality_map[task_fam] = sum(scores) / len(scores)
+                    try:
+                        scores = [float(s) for s in raw_scores]
+                        if scores:
+                            quality_map[task_fam] = sum(scores) / len(scores)
+                    except (ValueError, TypeError, ZeroDivisionError):
+                        logger.warning(
+                            "skipping corrupted quality data for %s key=%s",
+                            task_fam,
+                            q_key,
+                        )
 
             if quality_map:
                 await self._redis.hset(
@@ -239,6 +247,9 @@ class CapabilityUpdater:
                 == "True",
                 "last_updated_ts": float(data.get("last_updated_ts", 0)),
             }
+        except json.JSONDecodeError:
+            logger.exception("get_stats_error provider=%s model=%s", provider, model)
+            return {}
         except Exception:
             logger.exception("get_stats_error provider=%s model=%s", provider, model)
             return {}
