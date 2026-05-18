@@ -74,17 +74,30 @@ class BanditArm:
         cls, provider: str, model: str, task_family: str, data: dict[str, str]
     ) -> BanditArm:
         """Hydrate an arm from Redis hash data."""
+
+        def _float(val: str | None, default: float) -> float:
+            try:
+                return float(val) if val is not None else default
+            except (ValueError, TypeError):
+                return default
+
+        def _int(val: str | None, default: int) -> int:
+            try:
+                return int(val) if val is not None else default
+            except (ValueError, TypeError):
+                return default
+
         return cls(
             provider=provider,
             model=model,
             task_family=task_family,
-            mean_quality=float(data.get("mean_quality", DEFAULT_MEAN_QUALITY)),
-            n_pulls=int(data.get("n_pulls", 0)),
-            sum_quality=float(data.get("sum_quality", 0.0)),
-            ewma_quality=float(data.get("ewma_quality", DEFAULT_EWMA_QUALITY)),
-            variance=float(data.get("variance", 0.0)),
-            m2=float(data.get("m2", 0.0)),
-            last_updated_ts=float(data.get("last_updated_ts", time.time())),
+            mean_quality=_float(data.get("mean_quality"), DEFAULT_MEAN_QUALITY),
+            n_pulls=_int(data.get("n_pulls"), PRIOR_N_PULLS),
+            sum_quality=_float(data.get("sum_quality"), 0.0),
+            ewma_quality=_float(data.get("ewma_quality"), DEFAULT_EWMA_QUALITY),
+            variance=_float(data.get("variance"), 0.0),
+            m2=_float(data.get("m2"), 0.0),
+            last_updated_ts=_float(data.get("last_updated_ts"), time.time()),
         )
 
     def to_redis(self) -> dict[str, str]:
