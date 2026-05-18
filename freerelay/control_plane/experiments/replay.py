@@ -266,8 +266,9 @@ class ReplayEngine:
             key = f"freerelay:bandit:{provider}:{model}:{task_family}"
             data = await self._redis.hgetall(key)
             if data:
-                return float(data.get("ewma_quality", 0.5))
-        except Exception:
+                raw = data.get("ewma_quality", "0.5")
+                return float(raw)
+        except (ValueError, TypeError):
             pass
         return 0.5  # neutral prior
 
@@ -277,8 +278,9 @@ class ReplayEngine:
             key = f"freerelay:capability:{provider}:{model}"
             data = await self._redis.hgetall(key)
             if data:
-                return float(data.get("p50_ttft_ms", 100.0))
-        except Exception:
+                raw = data.get("p50_ttft_ms", "100.0")
+                return float(raw)
+        except (ValueError, TypeError):
             pass
         return 100.0  # default estimate
 
