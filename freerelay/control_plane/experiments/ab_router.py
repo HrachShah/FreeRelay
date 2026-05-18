@@ -290,27 +290,14 @@ class ExperimentManager:
         """Record a single outcome for an experiment arm."""
         m_key = f"{METRICS_KEY_PREFIX}:{experiment_id}:{arm}"
         try:
-            # Use HINCRBY for integer counters, HSET for floats
             pipe = self._redis.pipeline()
             pipe.hincrby(m_key, "total_requests", 1)
             if success:
                 pipe.hincrby(m_key, "success_count", 1)
-
-            # For floats, read-modify-write
-            data = await self._redis.hgetall(m_key)
-            total_requests = int(data.get("total_requests", 0)) + 1
-            total_quality = float(data.get("total_quality", 0)) + quality
-            total_latency = float(data.get("total_latency_ms", 0)) + latency_ms
-            total_cost = float(data.get("total_cost", 0)) + cost
-
-            await self._redis.hset(
-                m_key,
-                mapping={
-                    "total_quality": str(total_quality),
-                    "total_latency_ms": str(total_latency),
-                    "total_cost": str(total_cost),
-                },
-            )
+            pipe.hincrbyfloat(m_key, "total_quality", quality)
+            pipe.hincrbyfloat(m_key, "total_latency_ms", latency_ms)
+            pipe.hincrbyfloat(m_key, "total_cost", cost)
+            await pipe.execute()
 
             # Check canary auto-rollback
             config = await self.get_experiment(experiment_id)
@@ -320,8 +307,9 @@ class ExperimentManager:
                 and config.auto_rollback
                 and arm == "B"
             ):
-                if total_requests >= CANARY_MIN_SAMPLES:
-                    mean_q = total_quality / total_requests
+                arm_metrics = await self.get_arm_metrics(experiment_id, arm)
+                if arm_metrics.total_requests >= CANARY_MIN_SAMPLES:
+                    mean_q = arm_metrics.mean_quality
                     if mean_q < config.quality_threshold:
                         await self.stop_experiment(
                             experiment_id,
