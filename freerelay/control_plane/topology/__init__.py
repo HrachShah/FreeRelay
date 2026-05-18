@@ -255,7 +255,7 @@ class RegionalTopology:
             for key in keys:
                 data = await self._redis.hget(key, "region")
                 if data:
-                    regions.add(Region(data.decode()))
+                    regions.add(Region(data))
 
             if cursor == 0:
                 break
