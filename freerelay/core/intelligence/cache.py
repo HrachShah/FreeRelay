@@ -134,7 +134,7 @@ class SemanticCache:
             try:
                 return ChatCompletionResponse.model_validate_json(entry.response_json)
             except ValueError:
-                del self._entries[key]
+                self._entries.pop(key, None)
                 return None
 
         # Semantic match via LSH
