@@ -197,9 +197,9 @@ class SemanticCache:
         now = time.time()
         expired = [k for k, v in self._entries.items() if (now - v.created_at) >= v.ttl]
         for k in expired:
-            del self._entries[k]
-            if self._lsh is not None:
-                with contextlib.suppress(KeyError):
+            entry = self._entries.pop(k, None)
+            if entry and entry.minhash and self._lsh is not None:
+                with contextlib.suppress(ValueError):
                     self._lsh.remove(k)
 
     def flush(self) -> None:
