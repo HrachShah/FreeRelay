@@ -30,4 +30,4 @@ class SupabaseUsageLogger:
                 "notes": record.notes
             }).execute()
         except (ValueError, TypeError, AttributeError) as e:
-            logger.error(f"Failed to log usage to Supabase: {e}")
+            logger.error("Failed to log usage to Supabase: %s", e)
