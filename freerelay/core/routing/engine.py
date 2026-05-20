@@ -280,16 +280,13 @@ class RoutingEngine:
             if self.budget.is_budget_exhausted(slot.provider.name):
                 continue
 
-            # In auto mode, filter by tier preference
-            # If we have paid providers and this is a complex task, prefer paid
-            # Otherwise, prefer free
-            if has_paid:
-                if slot.tier == preferred_tier or (
-                    preferred_tier == "paid" and slot.tier == "paid"
-                ):
+            # In auto mode, filter by tier preference.
+            # If we have paid providers and this is a complex task, prefer paid.
+            # Only use free slots as fallback when no paid slots are available.
+            if has_paid and preferred_tier == "paid":
+                if slot.tier == "paid":
                     available.insert(0, slot)  # Higher priority
-                elif slot.tier == "free":
-                    available.append(slot)  # Fallback
+                # else: skip free tier when paid slots exist and task warrants paid tier
             else:
                 available.append(slot)
 
@@ -500,6 +497,9 @@ class RoutingEngine:
                 slot.error_count += 1
                 logger.warning("%s stream error: %s", provider.name, str(e)[:100])
                 continue
+
+            except (asyncio.CancelledError, KeyboardInterrupt):
+                raise
 
             except Exception as e:
                 await slot.circuit.record_failure(None)
