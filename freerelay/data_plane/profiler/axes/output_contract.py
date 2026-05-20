@@ -43,6 +43,8 @@ def classify_output_contract(
             return "json", 0.95
         if fmt == "json_schema":
             return "schema", 0.95
+        if fmt == "text":
+            return "prose", 0.90
 
     text = request.get_content_text().lower()
 
