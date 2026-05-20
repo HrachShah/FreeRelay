@@ -270,8 +270,11 @@ def _resolve_path(path: str, context: dict[str, Any]) -> Any:
     for part in parts:
         if isinstance(current, dict):
             current = current.get(part)
-        elif hasattr(current, part):
-            current = getattr(current, part)
+        elif isinstance(current, (list, tuple)) and part.isdigit():
+            idx = int(part)
+            current = current[idx] if 0 <= idx < len(current) else None
+        elif part in current:
+            current = current[part]
         else:
             return None
     return current
