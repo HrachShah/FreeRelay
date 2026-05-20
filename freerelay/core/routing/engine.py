@@ -284,12 +284,9 @@ class RoutingEngine:
             # If we have paid providers and this is a complex task, prefer paid
             # Otherwise, prefer free
             if has_paid:
-                if slot.tier == preferred_tier or (
-                    preferred_tier == "paid" and slot.tier == "paid"
-                ):
-                    available.insert(0, slot)  # Higher priority
-                elif slot.tier == "free":
-                    available.append(slot)  # Fallback
+                if preferred_tier == "paid" and slot.tier == "free":
+                    continue  # Skip free tier when paid is preferred and paid is available
+                available.insert(0, slot)  # Higher priority
             else:
                 available.append(slot)
 
@@ -473,6 +470,8 @@ class RoutingEngine:
                                     delta = chunk["choices"][0].get("delta", {})
                                     if "content" in delta and delta["content"]:
                                         full_content.append(delta["content"])
+                            except (asyncio.CancelledError, KeyboardInterrupt):
+                                raise
                             except Exception:
                                 pass
 
