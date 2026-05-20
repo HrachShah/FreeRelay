@@ -79,6 +79,7 @@ async def execute(
             from freerelay.core.models.openai import (
                 ChatCompletionRequest,
                 Message,
+                ResponseFormat,
             )
 
             verify_request = ChatCompletionRequest(
@@ -88,7 +89,7 @@ async def execute(
                 ],
                 temperature=0.0,
                 max_tokens=1024,
-                response_format={"type": "json_object"},
+                response_format=ResponseFormat(type="json_object"),
             )
             response = await router.route(verify_request)
             verify_content = ""
