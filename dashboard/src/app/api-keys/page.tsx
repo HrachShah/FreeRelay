@@ -58,9 +58,9 @@ export default function ApiKeysPage() {
   const addKey = () => {
     if (!newKeyName) return
     const newKey = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       name: newKeyName,
-      key: `fr_live_....................${Math.random().toString(16).substr(2, 4)}`,
+      key: `fr_live_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`,
       created: new Date().toISOString().split('T')[0],
       lastUsed: "Never",
       status: "Active",
