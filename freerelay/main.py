@@ -67,10 +67,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     count = len(_engine.slots)
     logger.info("=" * 56)
     logger.info("  ⚡ FreeRelay AI Gateway v0.1.0")
-    logger.info(f"  Endpoint:  http://localhost:{settings.port}/v1/chat/completions")
-    logger.info(f"  Dashboard: http://localhost:{settings.port}/dashboard/")
-    logger.info(f"  Providers: {count} loaded")
-    logger.info(f"  Chaos:     {'ON' if settings.enable_chaos else 'OFF'}")
+    logger.info("  Endpoint:  http://localhost:%s/v1/chat/completions", settings.port)
+    logger.info("  Dashboard: http://localhost:%s/dashboard/", settings.port)
+    logger.info("  Providers: %s loaded", count)
+    logger.info("  Chaos:     %s", "ON" if settings.enable_chaos else "OFF")
     logger.info("=" * 56)
 
     if count == 0:
