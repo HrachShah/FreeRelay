@@ -211,6 +211,8 @@ class WorkloadProfiler:
     ) -> str:
         if request.response_format and request.response_format.type == "json_object":
             return "schema"
+        if request.response_format and request.response_format.type == "text":
+            return "prose"
         if words & self._json_keywords:
             return "json"
         if words & self._code_keywords:
