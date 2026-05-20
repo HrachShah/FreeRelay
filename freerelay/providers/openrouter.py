@@ -79,7 +79,6 @@ class OpenRouterProvider(BaseProvider):
             if resp.status_code == 429:
                 raise RateLimitError(provider_name=self.name)
             if resp.status_code >= 400:
-                await resp.aread()
                 raise ProviderError(
                     message=resp.text[:300],
                     status_code=resp.status_code,
