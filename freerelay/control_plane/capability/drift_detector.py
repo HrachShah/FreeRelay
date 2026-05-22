@@ -88,7 +88,7 @@ def detect_anomaly(
     Uses exponentially-weighted moving average with 3-sigma bounds.
 
     Args:
-        values: Historical values (last entry is the new value if already appended).
+        values: Historical values.
         new_value: The value to test for anomaly.
         alpha: EWMA smoothing factor (0 < alpha <= 1).
         sigma_multiplier: Number of standard deviations for control limits.
@@ -97,12 +97,18 @@ def detect_anomaly(
     Returns:
         AnomalyResult with detection outcome and diagnostics.
     """
-    # Filter to just historical values (exclude the new value if present)
-    history = (
-        [v for v in values if v != new_value] if new_value in values else list(values)
-    )
-    if not history:
-        history = values
+    if len(values) <= 1:
+        return AnomalyResult(
+            is_anomaly=False,
+            severity=0.0,
+            ewma=values[0] if values else new_value,
+            sigma=0.0,
+            value=new_value,
+            upper_limit=float("inf"),
+            lower_limit=float("-inf"),
+        )
+
+    history = values[:-1]
 
     if len(history) < min_samples:
         return AnomalyResult(
