@@ -177,7 +177,7 @@ class PolicyDSL:
             logger.info("Loaded %d routing policies", len(self._policies))
             return self._policies
 
-        except Exception:
+        except (yaml.YAMLError, OSError):
             logger.exception("Failed to parse policy YAML")
             return []
 
