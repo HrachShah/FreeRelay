@@ -185,8 +185,11 @@ def status() -> None:
     try:
         resp = httpx.get("http://localhost:8000/v1/stats", timeout=5)
         data = resp.json()
-    except Exception:
+    except httpx.HTTPError:
         console.print("[red]✗ FreeRelay not running. Start with: freerelay[/red]")
+        raise typer.Exit(1) from None
+    except Exception:
+        console.print("[red]✗ Unexpected error connecting to FreeRelay.[/red]")
         raise typer.Exit(1) from None
 
     from rich.table import Table
@@ -242,6 +245,8 @@ def benchmark(
                     )
                     if r.status_code == 200:
                         latencies.append((time.time() - start) * 1000)
+                except httpx.HTTPError:
+                    pass
                 except Exception:
                     pass
 
