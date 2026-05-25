@@ -166,7 +166,7 @@ class DriftDetector:
         try:
             raw_history = await self._redis.lrange(history_key, 0, -1)
             values = [float(v) for v in raw_history]
-        except Exception:
+        except (ValueError, OSError) as e:
             logger.exception(
                 "detect_read_error provider=%s metric=%s", provider, metric
             )
@@ -278,7 +278,7 @@ class DriftDetector:
             pipe.lpush(key, str(value))
             pipe.ltrim(key, 0, max_history - 1)
             await pipe.execute()
-        except Exception:
+        except OSError as e:
             logger.exception(
                 "append_metric_error provider=%s metric=%s", provider, metric
             )
