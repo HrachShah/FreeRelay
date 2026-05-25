@@ -250,7 +250,7 @@ class CapabilityUpdater:
         except json.JSONDecodeError:
             logger.exception("get_stats_error provider=%s model=%s", provider, model)
             return {}
-        except Exception:
+        except (ValueError, OSError) as e:
             logger.exception("get_stats_error provider=%s model=%s", provider, model)
             return {}
 
