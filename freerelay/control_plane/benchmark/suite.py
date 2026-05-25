@@ -355,16 +355,16 @@ def load_suite(suite_dir: Path | str | None = None) -> list[BenchmarkPrompt]:
                     for entry in data:
                         try:
                             prompts.append(BenchmarkPrompt.from_dict(entry))
-                        except Exception:
+                        except (ValueError, KeyError):
                             logger.warning("skipping malformed prompt in %s", json_file)
                 elif isinstance(data, dict) and "prompts" in data:
                     for entry in data["prompts"]:
                         try:
                             prompts.append(BenchmarkPrompt.from_dict(entry))
-                        except Exception:
+                        except (ValueError, KeyError):
                             logger.warning("skipping malformed prompt in %s", json_file)
                 logger.info("loaded_prompts file=%s count=%d", json_file, len(prompts))
-            except Exception:
+            except (OSError, ValueError):
                 logger.exception("load_suite_error file=%s", json_file)
 
     if not prompts:
