@@ -18,6 +18,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
+import asyncio
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -202,6 +203,8 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.body()
+        except asyncio.CancelledError:
+            raise
         except Exception:
             return JSONResponse(
                 status_code=400,
