@@ -221,7 +221,7 @@ class AuditLogger:
                         namespace,
                     )
                     return len(ids)
-            except Exception as exc:
+            except redis.asyncio.ResponseError as exc:
                 logger.error("Failed to purge audit records: %s", exc)
             return 0
 
