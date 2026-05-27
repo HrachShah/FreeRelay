@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import time
+import asyncio
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -65,6 +66,8 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
 
                 return response
 
+            except asyncio.CancelledError:
+                raise
             except Exception as e:
                 elapsed_ms = (time.time() - start) * 1000
                 span.set_attribute("duration_ms", round(elapsed_ms, 1))
