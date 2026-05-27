@@ -77,6 +77,8 @@ class MetricsBroadcaster:
                             "data": metrics,
                         }
                     )
+            except asyncio.CancelledError:
+                raise
             except Exception as e:
                 logger.error("Metrics broadcast error: %s", e)
 
