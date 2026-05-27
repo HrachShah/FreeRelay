@@ -59,7 +59,7 @@ class CapabilityUpdater:
                     provider, model, outcome.task_family, outcome.judge_score
                 )
 
-        except Exception:
+        except (AttributeError, TypeError, ValueError, KeyError) as exc:
             logger.exception(
                 "process_outcome_error provider=%s model=%s", provider, model
             )
@@ -123,7 +123,7 @@ class CapabilityUpdater:
             # Recompute aggregates
             await self._recompute_provider_stats(provider, model)
 
-        except Exception:
+        except (ValueError, TypeError, OSError) as exc:
             logger.exception(
                 "process_provider_batch_error provider=%s model=%s", provider, model
             )
@@ -218,7 +218,7 @@ class CapabilityUpdater:
 
             await self._redis.hset(cap_key, "last_updated_ts", str(time.time()))
 
-        except Exception:
+        except (ValueError, TypeError, OSError) as exc:
             logger.exception(
                 "recompute_stats_error provider=%s model=%s", provider, model
             )
