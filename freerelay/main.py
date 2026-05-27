@@ -24,6 +24,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import ValidationError
 
 from freerelay.config.settings import get_settings
 from freerelay.core.models.openai import (
@@ -95,7 +96,7 @@ def create_app() -> FastAPI:
         from fastapi.responses import ORJSONResponse
 
         default_response_class: type[Response] = ORJSONResponse
-    except Exception:
+    except ImportError:
         default_response_class = JSONResponse
 
     app = FastAPI(
@@ -205,18 +206,18 @@ def create_app() -> FastAPI:
             body = await request.body()
         except asyncio.CancelledError:
             raise
-        except Exception:
+        except OSError as exc:
             return JSONResponse(
                 status_code=400,
-                content=ChatCompletionResponse.error_body("Invalid JSON body", 400),
+                content=ChatCompletionResponse.error_body(f"Invalid JSON body: {exc}", 400),
             )
 
         try:
             req = ChatCompletionRequest.model_validate_json(body)
-        except Exception as e:
+        except ValidationError as exc:
             return JSONResponse(
                 status_code=400,
-                content=ChatCompletionResponse.error_body(f"Invalid request: {e}", 400),
+                content=ChatCompletionResponse.error_body(f"Invalid request: {exc}", 400),
             )
 
         logger.info(
