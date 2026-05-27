@@ -351,6 +351,9 @@ def load_suite(suite_dir: Path | str | None = None) -> list[BenchmarkPrompt]:
             try:
                 with open(json_file, encoding="utf-8") as f:
                     data = json.load(f)
+                except (OSError, ValueError):
+                    logger.exception("load_suite_error file=%s", json_file)
+                    continue
                 if isinstance(data, list):
                     for entry in data:
                         try:
@@ -364,8 +367,6 @@ def load_suite(suite_dir: Path | str | None = None) -> list[BenchmarkPrompt]:
                         except Exception:
                             logger.warning("skipping malformed prompt in %s", json_file)
                 logger.info("loaded_prompts file=%s count=%d", json_file, len(prompts))
-            except Exception:
-                logger.exception("load_suite_error file=%s", json_file)
 
     if not prompts:
         logger.info("no_suite_files_found using_default_prompts")
