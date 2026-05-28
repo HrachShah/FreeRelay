@@ -136,7 +136,7 @@ class OutcomeConsumer:
             logger.info(
                 "consumer_group_created stream=%s group=%s", self._stream, self._group
             )
-        except Exception as exc:
+        except redis.asyncio.ResponseError as exc:
             # BUSYGROUP means the group already exists — that's fine
             if "BUSYGROUP" in str(exc):
                 logger.debug(
@@ -167,7 +167,7 @@ class OutcomeConsumer:
                 count=batch_size,
                 block=block_ms,
             )
-        except Exception:
+        except redis.asyncio.ResponseError:
             logger.exception("consume_batch_read_error")
             return []
 
@@ -177,7 +177,7 @@ class OutcomeConsumer:
                 try:
                     record = OutcomeRecord.from_stream(msg_id, fields)
                     records.append(record)
-                except Exception:
+                except (json.JSONDecodeError, ValueError, TypeError):
                     logger.exception("consume_batch_parse_error id=%s", msg_id)
 
         if records:
@@ -195,7 +195,7 @@ class OutcomeConsumer:
             count = await self._redis.xack(self._stream, self._group, *message_ids)
             logger.debug("acked_outcomes count=%d", count)
             return count
-        except Exception:
+        except (json.JSONDecodeError, ValueError, TypeError):
             logger.exception("acknowledge_error")
             return 0
 
@@ -224,7 +224,7 @@ class OutcomeConsumer:
                 "max_id": info.get("max"),
                 "consumers": info.get("consumers", []),
             }
-        except Exception:
+        except redis.asyncio.ResponseError:
             logger.exception("pending_info_error")
             return {"pending_count": 0}
 
@@ -274,6 +274,6 @@ class OutcomeConsumer:
                 logger.info("claimed_stale_outcomes count=%d", len(records))
             return records
 
-        except Exception:
+        except redis.asyncio.ResponseError:
             logger.exception("claim_stale_error")
             return []
