@@ -195,7 +195,7 @@ class OutcomeConsumer:
             count = await self._redis.xack(self._stream, self._group, *message_ids)
             logger.debug("acked_outcomes count=%d", count)
             return count
-        except (json.JSONDecodeError, ValueError, TypeError):
+        except redis.asyncio.ResponseError:
             logger.exception("acknowledge_error")
             return 0
 
