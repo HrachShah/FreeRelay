@@ -125,7 +125,7 @@ class Executor:
                 await asyncio.sleep(delay)
                 continue
 
-            except Exception as e:
+            except (asyncio.TimeoutError, RuntimeError) as e:
                 last_error = e
                 if circuit:
                     await circuit.record_failure(None)
