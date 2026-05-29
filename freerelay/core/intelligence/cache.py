@@ -133,7 +133,7 @@ class SemanticCache:
         if entry and (time.time() - entry.created_at) < entry.ttl:
             try:
                 return ChatCompletionResponse.model_validate_json(entry.response_json)
-            except Exception:
+            except (ValueError, TypeError):
                 del self._entries[key]
                 return None
 
@@ -153,7 +153,7 @@ class SemanticCache:
                                 return ChatCompletionResponse.model_validate_json(
                                     candidate.response_json
                                 )
-                            except Exception:
+                            except (ValueError, TypeError):
                                 continue
                 except Exception:
                     pass
