@@ -29,5 +29,7 @@ class SupabaseUsageLogger:
                 "schema_pass": record.schema_pass,
                 "notes": record.notes
             }).execute()
+        except OSError as e:
+            logger.error("Supabase network error while logging usage: %s", e)
         except Exception as e:
-            logger.error(f"Failed to log usage to Supabase: {e}")
+            logger.error("Failed to log usage to Supabase: %s %s", type(e).__name__, e)
