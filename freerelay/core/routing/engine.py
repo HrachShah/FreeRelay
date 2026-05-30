@@ -163,7 +163,7 @@ class RoutingEngine:
             matrix = CapabilityMatrix.model_validate(data)
             logger.info("Loaded capability matrix: %d models", len(matrix.models))
             return matrix
-        except Exception:
+        except (OSError, yaml.YAMLError, ValueError) as exc:
             logger.exception("Failed to load capability matrix: %s", path)
             return None
 
