@@ -187,7 +187,7 @@ async def create_tenant(
         return {"namespace": namespace, "status": "created"}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
+    except RuntimeError as exc:
         logger.exception("admin_create_tenant_error")
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -304,7 +304,7 @@ async def update_policy(
         version = await _policy_publisher.publish(req.policy, reason=req.reason)
         await _policy_publisher.snapshot_version(version)
         return {"version": version, "status": "published"}
-    except Exception as exc:
+    except (ValueError, RuntimeError) as exc:
         logger.exception("admin_update_policy_error")
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -345,7 +345,7 @@ async def create_experiment(
     try:
         exp_id = await _experiment_manager.create_experiment(config)
         return {"experiment_id": exp_id, "status": "created"}
-    except Exception as exc:
+    except (ValueError, TypeError) as exc:
         logger.exception("admin_create_experiment_error")
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -458,7 +458,7 @@ async def trigger_benchmark(
             "mode": "spot_check" if req.spot_check else "full_suite",
             "status": "triggered",
         }
-    except Exception as exc:
+    except (ValueError, RuntimeError) as exc:
         logger.exception("admin_trigger_benchmark_error")
         raise HTTPException(status_code=500, detail=str(exc))
 
