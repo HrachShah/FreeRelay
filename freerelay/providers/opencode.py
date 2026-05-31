@@ -166,7 +166,7 @@ async def fetch_opencode_models(api_key: str = "") -> list[dict[str, str]]:
                         }
                     )
             return models
-    except Exception:
+    except (OSError, ValueError):
         pass
 
     # Fallback: return known free model
