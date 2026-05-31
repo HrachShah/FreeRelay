@@ -12,6 +12,7 @@ Production AI gateway with:
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from collections.abc import AsyncIterator
@@ -202,7 +203,7 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.body()
-        except Exception:
+        except OSError:
             return JSONResponse(
                 status_code=400,
                 content=ChatCompletionResponse.error_body("Invalid JSON body", 400),
@@ -210,10 +211,16 @@ def create_app() -> FastAPI:
 
         try:
             req = ChatCompletionRequest.model_validate_json(body)
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             return JSONResponse(
                 status_code=400,
                 content=ChatCompletionResponse.error_body(f"Invalid request: {e}", 400),
+            )
+        except Exception as e:
+            logger.exception("Unexpected request validation error")
+            return JSONResponse(
+                status_code=400,
+                content=ChatCompletionResponse.error_body("Invalid request", 400),
             )
 
         logger.info(
@@ -305,11 +312,17 @@ def create_app() -> FastAPI:
             ).execute()
 
             return RegisterResponse(api_key=api_key)
+        except (ValueError, TypeError) as e:
+            logger.exception("Registration failed")
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Registration failed: {str(e)}"},
+            )  # type: ignore
         except Exception as e:
             logger.exception("Registration failed")
             return JSONResponse(
                 status_code=500,
-                content={"error": f"Registration failed: {str(e)}"},
+                content={"error": "Registration failed"},
             )  # type: ignore
 
     @app.post("/v1/billing/checkout", response_model=None)
@@ -563,7 +576,7 @@ def create_app() -> FastAPI:
 
         try:
             body = await request.json()
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             return JSONResponse(
                 status_code=400,
                 content={"error": "Invalid JSON body"},
