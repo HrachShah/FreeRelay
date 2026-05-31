@@ -341,7 +341,7 @@ def create_app() -> FastAPI:
             event = stripe.Webhook.construct_event(
                 payload, sig_header, settings.stripe_webhook_secret
             )  # type: ignore[no-untyped-call]
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             return Response(content=str(e), status_code=400)
 
         if event["type"] == "checkout.session.completed":
