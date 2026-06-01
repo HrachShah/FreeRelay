@@ -233,7 +233,7 @@ class CapabilityRegistry:
             if not data:
                 return None
             return CapabilityRecord.from_redis(data)
-        except Exception:
+        except (redis.asyncio.RedisError, KeyError, AttributeError):
             logger.exception("get_record_error provider=%s model=%s", provider, model)
             return None
 

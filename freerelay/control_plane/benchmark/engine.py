@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import redis.asyncio as aioredis
+import httpx
 
 from freerelay.control_plane.benchmark.evaluator import ScoreResult, evaluate
 from freerelay.control_plane.benchmark.suite import (
@@ -246,7 +247,7 @@ class BenchmarkEngine:
 
         except TimeoutError:
             error = f"Timeout after {prompt.timeout_s}s"
-        except Exception as exc:
+        except (httpx.RequestError, httpx.HTTPStatusError, asyncio.TimeoutError) as exc:
             error = str(exc)
 
         end_time = time.monotonic()
@@ -356,7 +357,7 @@ class BenchmarkEngine:
 
             logger.info("benchmark_results_stored key=%s", key)
 
-        except Exception:
+        except (redis.asyncio.RedisError, json.JSONDecodeError):
             logger.exception("store_results_error")
 
     async def get_latest_results(
@@ -371,7 +372,7 @@ class BenchmarkEngine:
         try:
             entries = await self._redis.zrevrange(key, 0, count - 1)
             return [json.loads(e) for e in entries]
-        except Exception:
+        except (redis.asyncio.RedisError, json.JSONDecodeError):
             logger.exception("get_results_error")
             return []
 
