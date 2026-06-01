@@ -226,14 +226,14 @@ class CapabilityRegistry:
                 )
 
     async def get_record(self, provider: str, model: str) -> CapabilityRecord | None:
-        """Load a capability record from Redis."""
+        """Retrieve a capability record from Redis."""
         key = f"{CAPABILITY_KEY_PREFIX}:{provider}:{model}"
         try:
             data = await self._redis.hgetall(key)
             if not data:
                 return None
             return CapabilityRecord.from_redis(data)
-        except Exception:
+        except (redis.asyncio.RedisError, KeyError, AttributeError):
             logger.exception("get_record_error provider=%s model=%s", provider, model)
             return None
 
@@ -248,7 +248,7 @@ class CapabilityRegistry:
             logger.debug(
                 "capability_updated provider=%s model=%s", record.provider, record.model
             )
-        except Exception:
+        except redis.asyncio.RedisError:
             logger.exception(
                 "update_record_error provider=%s model=%s",
                 record.provider,
@@ -269,7 +269,7 @@ class CapabilityRegistry:
                 if data:
                     records.append(CapabilityRecord.from_redis(data))
             return records
-        except Exception:
+        except (redis.asyncio.RedisError, KeyError, AttributeError):
             logger.exception("list_records_error")
             return []
 
@@ -283,7 +283,7 @@ class CapabilityRegistry:
             if deleted:
                 logger.info("capability_deleted provider=%s model=%s", provider, model)
             return bool(deleted)
-        except Exception:
+        except (redis.asyncio.RedisError, KeyError):
             logger.exception(
                 "delete_record_error provider=%s model=%s", provider, model
             )
@@ -363,5 +363,5 @@ class CapabilityRegistry:
                 field,
                 value,
             )
-        except Exception:
+        except (redis.asyncio.RedisError, KeyError):
             logger.exception("set_degradation_error")

@@ -166,7 +166,7 @@ class DriftDetector:
         try:
             raw_history = await self._redis.lrange(history_key, 0, -1)
             values = [float(v) for v in raw_history]
-        except Exception:
+        except (redis.asyncio.RedisError, ValueError):
             logger.exception(
                 "detect_read_error provider=%s metric=%s", provider, metric
             )
@@ -251,7 +251,7 @@ class DriftDetector:
                     result = await self.detect_provider_metric(provider, metric)
                     results.append(result)
 
-        except Exception:
+        except redis.asyncio.RedisError:
             logger.exception("detect_all_error")
 
         return results
@@ -278,7 +278,7 @@ class DriftDetector:
             pipe.lpush(key, str(value))
             pipe.ltrim(key, 0, max_history - 1)
             await pipe.execute()
-        except Exception:
+        except redis.asyncio.RedisError:
             logger.exception(
                 "append_metric_error provider=%s metric=%s", provider, metric
             )
@@ -297,7 +297,7 @@ class DriftDetector:
                     await self._redis.hset(
                         cap_key, "last_degraded_at", str(time.time())
                     )
-        except Exception:
+        except redis.asyncio.RedisError:
             logger.exception(
                 "set_degradation_error provider=%s metric=%s", provider, metric
             )
