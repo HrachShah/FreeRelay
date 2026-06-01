@@ -14,6 +14,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
+import json
 
 from freerelay.config.settings import get_settings
 from freerelay.core.models.openai import ChatCompletionRequest, Message
@@ -185,7 +186,7 @@ def status() -> None:
     try:
         resp = httpx.get("http://localhost:8000/v1/stats", timeout=5)
         data = resp.json()
-    except Exception:
+    except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError):
         console.print("[red]✗ FreeRelay not running. Start with: freerelay[/red]")
         raise typer.Exit(1) from None
 
@@ -242,7 +243,7 @@ def benchmark(
                     )
                     if r.status_code == 200:
                         latencies.append((time.time() - start) * 1000)
-                except Exception:
+                except (httpx.RequestError, httpx.HTTPStatusError, asyncio.TimeoutError):
                     pass
 
             await asyncio.gather(*[send() for _ in range(requests)])
@@ -324,7 +325,7 @@ def ask(
                     console.print(f"[red]Error: {response.error.message}[/red]")
                 else:
                     console.print(f"[red]Unexpected response format: {response}[/red]")
-            except Exception as e:
+            except (ProviderError, RateLimitError, json.JSONDecodeError) as e:
                 console.print(f"[red]Error: {str(e)}[/red]")
             finally:
                 # Cleanup shared HTTP client
