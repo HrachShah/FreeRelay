@@ -141,7 +141,7 @@ async def execute(
                     r = task.result()
                     if r.error:
                         errors.append(r.error)
-                except Exception as e:
+                except (asyncio.InvalidStateError, KeyError, AttributeError) as e:
                     errors.append(str(e))
 
             return StepOutput(

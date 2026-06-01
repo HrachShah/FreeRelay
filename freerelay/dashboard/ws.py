@@ -79,7 +79,7 @@ class MetricsBroadcaster:
                     )
             except asyncio.CancelledError:
                 raise
-            except Exception as e:
+            except (websockets.exceptions.WebSocketException, RuntimeError, OSError) as e:
                 logger.error("Metrics broadcast error: %s", e)
 
             await asyncio.sleep(self.interval)
