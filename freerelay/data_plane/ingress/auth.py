@@ -14,6 +14,8 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import redis.asyncio
+
 if TYPE_CHECKING:
     from redis.asyncio import Redis
 
@@ -101,7 +103,7 @@ class AuthProvider:
                     result.decode("utf-8") if isinstance(result, bytes) else str(result)
                 )
             return None
-        except Exception:
+        except redis.asyncio.RedisError as err:
             logger.exception("Redis key lookup failed for hash %s", key_hash[:8])
             return None
 
