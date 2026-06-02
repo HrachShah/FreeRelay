@@ -15,6 +15,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
+import httpx
 
 from freerelay.shared.security.crypto import hash_api_key
 
@@ -67,7 +68,7 @@ def _verify_token_supabase(token_hash: str) -> dict[str, str] | None:
             _AUTH_CACHE[token_hash] = (user_info, now + _CACHE_TTL)
             return user_info
         return None
-    except Exception as e:
+    except (httpx.HTTPStatusError, httpx.RequestError, ValueError) as e:
         logger.error(f"Supabase auth error: {e}")
         return None
 
