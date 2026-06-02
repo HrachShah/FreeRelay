@@ -190,7 +190,7 @@ class ExperimentManager:
                 config.name,
             )
             return config.id
-        except Exception:
+        except (aioredis.RedisError, AttributeError, ValueError):
             logger.exception("create_experiment_error")
             raise
 
@@ -211,7 +211,7 @@ class ExperimentManager:
             )
             logger.info("experiment_started id=%s", experiment_id)
             return True
-        except Exception:
+        except (aioredis.RedisError, KeyError):
             logger.exception("start_experiment_error")
             return False
 
@@ -229,7 +229,7 @@ class ExperimentManager:
             )
             logger.info("experiment_stopped id=%s reason=%s", experiment_id, reason)
             return True
-        except Exception:
+        except (aioredis.RedisError, KeyError):
             logger.exception("stop_experiment_error")
             return False
 

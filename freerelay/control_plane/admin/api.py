@@ -187,7 +187,7 @@ async def create_tenant(
         return {"namespace": namespace, "status": "created"}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
+    except (aioredis.RedisError, AttributeError, TypeError) as exc:
         logger.exception("admin_create_tenant_error")
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -304,7 +304,7 @@ async def update_policy(
         version = await _policy_publisher.publish(req.policy, reason=req.reason)
         await _policy_publisher.snapshot_version(version)
         return {"version": version, "status": "published"}
-    except Exception as exc:
+    except (aioredis.RedisError, ValueError, AttributeError) as exc:
         logger.exception("admin_update_policy_error")
         raise HTTPException(status_code=500, detail=str(exc))
 
