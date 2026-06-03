@@ -68,7 +68,7 @@ def decrypt_key(ciphertext: str, secret: bytes) -> str:
 
     try:
         bundle = base64.b64decode(ciphertext)
-    except Exception as exc:
+    except ValueError as exc:
         raise ValueError("Invalid base64 ciphertext") from exc
 
     if len(bundle) < 28:  # 12 (nonce) + 16 (tag) minimum
@@ -118,7 +118,7 @@ def _aes_gcm_decrypt(ciphertext: bytes, key: bytes, nonce: bytes, tag: bytes) ->
             "cryptography package required for AES-256-GCM. "
             "Install with: pip install cryptography"
         ) from e
-    except Exception as exc:
+    except (ValueError, KeyError) as exc:
         raise ValueError("Decryption failed: invalid key or corrupted data") from exc
 
 
