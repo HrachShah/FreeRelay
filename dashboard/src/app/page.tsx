@@ -89,7 +89,10 @@ export default function DashboardPage() {
     fetch(`${apiUrl}/v1/hello`)
       .then((res) => res.json())
       .then((data) => setBackendStatus(data.message || "Connected"))
-      .catch((err) => setBackendStatus("Disconnected"))
+      .catch((err) => {
+        console.error("Backend health check failed:", err)
+        setBackendStatus("Disconnected")
+      })
 
     // Fetch analytics
     fetch(`${apiUrl}/v1/analytics?days=${days}`)
