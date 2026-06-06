@@ -226,14 +226,17 @@ class CapabilityRegistry:
                 )
 
     async def get_record(self, provider: str, model: str) -> CapabilityRecord | None:
-        """Load a capability record from Redis."""
+        """Fetch a capability record by provider/model."""
         key = f"{CAPABILITY_KEY_PREFIX}:{provider}:{model}"
         try:
             data = await self._redis.hgetall(key)
             if not data:
                 return None
             return CapabilityRecord.from_redis(data)
-        except Exception:
+        except (aioredis.RedisError, OSError, ValueError, TypeError):
+            # Redis I/O raises RedisError/OSError; CapabilityRecord.from_redis
+            # raises ValueError for malformed hash payloads and TypeError if
+            # the wire format is missing required fields
             logger.exception("get_record_error provider=%s model=%s", provider, model)
             return None
 
@@ -248,7 +251,9 @@ class CapabilityRegistry:
             logger.debug(
                 "capability_updated provider=%s model=%s", record.provider, record.model
             )
-        except Exception:
+        except (aioredis.RedisError, OSError, ValueError, TypeError):
+            # hset raises RedisError/OSError; mapping coercion raises TypeError
+            # if to_dict() returns a non-string value
             logger.exception(
                 "update_record_error provider=%s model=%s",
                 record.provider,
@@ -269,7 +274,9 @@ class CapabilityRegistry:
                 if data:
                     records.append(CapabilityRecord.from_redis(data))
             return records
-        except Exception:
+        except (aioredis.RedisError, OSError, ValueError, TypeError):
+            # scan_iter/hgetall raise RedisError/OSError; from_redis raises
+            # ValueError/TypeError for bad hash data
             logger.exception("list_records_error")
             return []
 
@@ -283,7 +290,8 @@ class CapabilityRegistry:
             if deleted:
                 logger.info("capability_deleted provider=%s model=%s", provider, model)
             return bool(deleted)
-        except Exception:
+        except (aioredis.RedisError, OSError):
+            # Redis I/O only — no ValueError/TypeError paths in this method
             logger.exception(
                 "delete_record_error provider=%s model=%s", provider, model
             )
@@ -363,5 +371,5 @@ class CapabilityRegistry:
                 field,
                 value,
             )
-        except Exception:
+        except (aioredis.RedisError, OSError):
             logger.exception("set_degradation_error")
