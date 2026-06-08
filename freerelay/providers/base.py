@@ -11,6 +11,7 @@ from collections.abc import AsyncIterator
 
 import httpx
 
+from freerelay.core.models.embeddings import EmbeddingRequest, EmbeddingResponse
 from freerelay.core.models.openai import ChatCompletionRequest, ChatCompletionResponse
 from freerelay.shared.http_client import get_client
 
@@ -93,6 +94,23 @@ class BaseProvider(ABC):
         Simple heuristic: count chars / 4 for each message.
         """
         ...
+
+    async def embed(
+        self,
+        request: EmbeddingRequest,
+        api_key: str,
+    ) -> EmbeddingResponse:
+        """
+        Generate embeddings for *request*.
+
+        Default implementation raises ``ProviderError``.  Override in
+        providers that support the ``"embeddings"`` feature flag.
+        """
+        raise ProviderError(
+            f"{self.name} does not support embeddings",
+            status_code=400,
+            provider_name=self.name,
+        )
 
     def strip_unsupported_fields(
         self, request: ChatCompletionRequest

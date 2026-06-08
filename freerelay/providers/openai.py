@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
+from freerelay.core.models.embeddings import EmbeddingRequest, EmbeddingResponse
 from freerelay.core.models.openai import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -16,11 +17,11 @@ from freerelay.providers.base import BaseProvider, ProviderError, RateLimitError
 
 
 class OpenAIProvider(BaseProvider):
-    """OpenAI API provider (paid)."""
+    """OpenAI API provider (paid) — also supports embeddings."""
 
     name = "openai"
     base_url = "https://api.openai.com/v1"
-    supported_features = {"streaming", "tools", "logprobs", "vision"}
+    supported_features = {"streaming", "tools", "logprobs", "vision", "embeddings"}
 
     _default_model = "gpt-4o-mini"
 
@@ -92,3 +93,35 @@ class OpenAIProvider(BaseProvider):
 
     def estimate_tokens(self, request: ChatCompletionRequest) -> int:
         return request.estimate_tokens()
+
+    async def embed(
+        self,
+        request: EmbeddingRequest,
+        api_key: str,
+    ) -> EmbeddingResponse:
+        payload: dict[str, object] = {
+            "input": request.inputs_as_strings(),
+            "model": request.model,
+            "encoding_format": request.encoding_format,
+        }
+        if request.dimensions is not None:
+            payload["dimensions"] = request.dimensions
+
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        resp = await self.http_client.post(
+            f"{self.base_url}/embeddings",
+            headers=headers,
+            json=payload,
+        )
+
+        if resp.status_code == 429:
+            raise RateLimitError(provider_name=self.name)
+        if resp.status_code >= 400:
+            raise ProviderError(resp.text[:300], status_code=resp.status_code, provider_name=self.name)
+
+        data = resp.json()
+        vectors = [item["embedding"] for item in data.get("data", [])]
+        usage = data.get("usage", {})
+        return EmbeddingResponse.from_vectors(
+            vectors, model=request.model, prompt_tokens=usage.get("prompt_tokens", 0)
+        )

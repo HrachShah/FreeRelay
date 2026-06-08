@@ -160,7 +160,123 @@ models:
     speed_tier: fast
     quality_tier: medium
     supports_streaming: true
+    supports_embeddings: true
     free_tier:
       rpm: null
+      tpm: null
+      tpd: null
+
+  # ── New providers ───────────────────────────────────────────────────
+
+  cerebras/llama3.1-8b:
+    provider: cerebras
+    context_window: 131072
+    strengths: [speed, simple_chat]
+    weaknesses: [reasoning]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    free_tier:
+      rpm: 30
+      tpm: null
+      tpd: null
+
+  cerebras/llama3.1-70b:
+    provider: cerebras
+    context_window: 131072
+    strengths: [speed, reasoning]
+    weaknesses: []
+    speed_tier: fast
+    quality_tier: high
+    supports_streaming: true
+    free_tier:
+      rpm: 30
+      tpm: null
+      tpd: null
+
+  cohere/command-r-plus:
+    provider: cohere
+    context_window: 128000
+    strengths: [multilingual, reasoning, tools, embeddings]
+    weaknesses: []
+    speed_tier: medium
+    quality_tier: high
+    supports_streaming: true
+    supports_tools: true
+    supports_embeddings: true
+    free_tier:
+      rpm: 20
+      tpm: null
+      tpd: null
+
+  cohere/command-r:
+    provider: cohere
+    context_window: 128000
+    strengths: [multilingual, tools, embeddings]
+    weaknesses: [reasoning]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    supports_tools: true
+    supports_embeddings: true
+    free_tier:
+      rpm: 20
+      tpm: null
+      tpd: null
+
+  cloudflare/@cf/meta/llama-3.1-8b-instruct:
+    provider: cloudflare
+    context_window: 131072
+    strengths: [speed, low_latency]
+    weaknesses: [reasoning]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    free_tier:
+      rpm: 30
+      tpm: null
+      tpd: 10000  # 10k neurons/day
+
+  github_models/openai/gpt-4o-mini:
+    provider: github_models
+    context_window: 128000
+    strengths: [reasoning, coding, tools, vision]
+    weaknesses: []
+    speed_tier: medium
+    quality_tier: high
+    supports_streaming: true
+    supports_tools: true
+    supports_vision: true
+    free_tier:
+      rpm: 15
+      tpm: null
+      tpd: null
+
+  huggingface/meta-llama/Llama-3.1-8B-Instruct:
+    provider: huggingface
+    context_window: 131072
+    strengths: [speed, embeddings]
+    weaknesses: [reasoning]
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    supports_embeddings: true
+    free_tier:
+      rpm: 60
+      tpm: null
+      tpd: null
+
+  zai/glm-4-flash:
+    provider: zai
+    context_window: 128000
+    strengths: [speed, multilingual, vision]
+    weaknesses: []
+    speed_tier: fast
+    quality_tier: medium
+    supports_streaming: true
+    supports_vision: true
+    supports_tools: true
+    free_tier:
+      rpm: 60
       tpm: null
       tpd: null

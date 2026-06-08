@@ -1,5 +1,6 @@
 """FreeRelay Providers — all supported providers."""
 
+from .blackbox import BlackboxProvider
 from .anthropic import AnthropicProvider
 from .codex import CodexProvider
 from .google import GoogleProvider
@@ -12,6 +13,7 @@ from .openrouter import OpenRouterProvider
 from .together import TogetherProvider
 
 __all__ = [
+    "BlackboxProvider",
     "AnthropicProvider",
     "CodexProvider",
     "GoogleProvider",

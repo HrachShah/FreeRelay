@@ -18,12 +18,23 @@ class ProviderKeys(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    blackbox_api_key: str = ""
     groq_api_key: str = ""
     google_ai_key: str = ""
     openrouter_api_key: str = ""
     together_api_key: str = ""
     mistral_api_key: str = ""
     nvidia_api_key: str = ""
+    nvidia_api_key_2: str = ""  # Legacy second key; prefer comma-separated NVIDIA_API_KEY
+
+    # ── New free providers ────────────────────────────────────────────
+    cerebras_api_key: str = ""
+    cohere_api_key: str = ""
+    cloudflare_api_key: str = ""
+    cloudflare_account_id: str = ""  # Required for Cloudflare Workers AI
+    github_models_token: str = ""    # GitHub PAT (classic or fine-grained)
+    huggingface_api_key: str = ""
+    zai_api_key: str = ""
 
     # Paid/premium API keys (optional)
     openai_api_key: str = ""
@@ -94,6 +105,9 @@ class Settings(BaseSettings):
 
     # ── Streaming ─────────────────────────────────────────
     stream_buffer_size: int = 32  # max chunks in backpressure queue
+
+    # ── Session Affinity ──────────────────────────────────
+    session_affinity_ttl: float = 1800.0  # seconds (30 min)
 
     # ── Chaos ─────────────────────────────────────────────
     enable_chaos: bool = False

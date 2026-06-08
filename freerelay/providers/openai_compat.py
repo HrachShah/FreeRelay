@@ -1,13 +1,14 @@
 """
-FreeRelay — NVIDIA Build Provider (key updated)
-====================================
-OpenAI-compatible API for NVIDIA NIM models.
-Free tier available.
+FreeRelay — OpenAICompatibleProvider base class.
+
+All providers that speak the OpenAI chat completions wire format inherit
+from this instead of duplicating the same complete/stream/estimate_tokens
+boilerplate.  Subclasses only need to declare class-level attributes and
+optionally override ``_build_headers`` or ``_map_model``.
 """
 
 from __future__ import annotations
 
-import itertools
 from collections.abc import AsyncIterator
 
 from freerelay.core.models.openai import (
@@ -17,45 +18,49 @@ from freerelay.core.models.openai import (
 from freerelay.providers.base import BaseProvider, ProviderError, RateLimitError
 
 
-class NVIDIAProvider(BaseProvider):
-    """NVIDIA Build API provider."""
+class OpenAICompatibleProvider(BaseProvider):
+    """
+    Reusable base for OpenAI-compatible chat completion providers.
 
-    name = "nvidia"
-    base_url = "https://integrate.api.nvidia.com/v1"
-    supported_features = {"streaming"}
+    Subclasses must define:
+      - ``name``: provider identifier string
+      - ``base_url``: upstream API root (no trailing slash)
+      - ``_default_model``: fallback model name
+      - ``supported_features``: set of feature strings
 
-    _default_model = "meta/llama-3.1-8b-instruct"
-    _key_cycle: itertools.cycle | None = None
+    Optional overrides:
+      - ``_build_headers(api_key)``: return the auth header dict
+      - ``_map_model(model_str)``: normalize the model name for this provider
+    """
 
-    def _pick_key(self, api_key: str) -> str:
-        """Round-robin between primary key and NVIDIA_API_KEY_2 if set."""
-        from freerelay.config.settings import ProviderKeys
-        key2 = ProviderKeys().nvidia_api_key_2
-        if not key2:
-            return api_key
-        if self._key_cycle is None:
-            NVIDIAProvider._key_cycle = itertools.cycle([api_key, key2])
-        return next(self._key_cycle)
+    name: str = ""
+    base_url: str = ""
+    supported_features: set[str] = {"streaming"}
+    _default_model: str = ""
+
+    def _build_headers(self, api_key: str) -> dict[str, str]:
+        """Return HTTP headers. Override for non-Bearer auth."""
+        return {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+    def _map_model(self, model: str | None) -> str:
+        """Normalize the model name. Override to remap model strings."""
+        return model or self._default_model
 
     async def complete(
         self,
         request: ChatCompletionRequest,
         api_key: str,
     ) -> ChatCompletionResponse:
-        api_key = self._pick_key(api_key)
         payload = self.strip_unsupported_fields(request)
-        if not payload.get("model"):
-            payload["model"] = self._default_model
+        payload["model"] = self._map_model(payload.get("model"))  # type: ignore[arg-type]
         payload.pop("stream", None)
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
 
         resp = await self.http_client.post(
             f"{self.base_url}/chat/completions",
-            headers=headers,
+            headers=self._build_headers(api_key),
             json=payload,
         )
 
@@ -75,21 +80,14 @@ class NVIDIAProvider(BaseProvider):
         request: ChatCompletionRequest,
         api_key: str,
     ) -> AsyncIterator[str]:
-        api_key = self._pick_key(api_key)
         payload = self.strip_unsupported_fields(request)
-        if not payload.get("model"):
-            payload["model"] = self._default_model
+        payload["model"] = self._map_model(payload.get("model"))  # type: ignore[arg-type]
         payload["stream"] = True
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
 
         async with self.http_client.stream(
             "POST",
             f"{self.base_url}/chat/completions",
-            headers=headers,
+            headers=self._build_headers(api_key),
             json=payload,
         ) as resp:
             if resp.status_code == 429:

@@ -46,93 +46,118 @@ def get_engine() -> RoutingEngine | None:
 
 def _build_engine(settings: Settings) -> RoutingEngine:
     """Build the routing engine and register providers based on mode."""
+    # Load encrypted keystore (env vars take precedence via Pydantic settings,
+    # so this is a supplementary source for keys not already in the environment)
+    try:
+        from freerelay.shared.security.keystore import KeyStore  # noqa: PLC0415
+        _ks_keys = KeyStore().load()
+        for env_var, value in _ks_keys.items():
+            import os  # noqa: PLC0415
+            if not os.environ.get(env_var):
+                os.environ[env_var] = value
+        if _ks_keys:
+            logger.info("Loaded %d key(s) from encrypted keystore", len(_ks_keys))
+    except Exception:
+        pass  # keystore is optional
+
+    from freerelay.providers.blackbox import BlackboxProvider
+    from freerelay.providers.cerebras import CerebrasProvider
+    from freerelay.providers.cloudflare import CloudflareProvider
+    from freerelay.providers.cohere import CohereProvider
+    from freerelay.providers.github_models import GitHubModelsProvider
     from freerelay.providers.google import GoogleProvider
     from freerelay.providers.groq import GroqProvider
+    from freerelay.providers.huggingface import HuggingFaceProvider
     from freerelay.providers.mistral import MistralProvider
     from freerelay.providers.nvidia import NVIDIAProvider
     from freerelay.providers.openrouter import OpenRouterProvider
     from freerelay.providers.together import TogetherProvider
+    from freerelay.providers.zai import ZaiProvider
 
     engine = RoutingEngine(settings)
     keys = settings.keys
     mode = settings.mode
 
-    # Define provider tiers
-    free_providers: list[tuple[type, str, int | None]] = [
-        (GroqProvider, keys.groq_api_key, 500_000),
-        (GoogleProvider, keys.google_ai_key, None),
-        (OpenRouterProvider, keys.openrouter_api_key, None),
-        (TogetherProvider, keys.together_api_key, None),
-        (MistralProvider, keys.mistral_api_key, None),
-        (NVIDIAProvider, keys.nvidia_api_key, None),
+    # ── Free providers ────────────────────────────────────────────────
+    # Tuple: (ProviderClass, api_key, daily_limit, rate_limits_dict)
+    # Legacy nvidia_api_key_2: merge into comma-separated for KeyPool
+    nvidia_key = keys.nvidia_api_key
+    if keys.nvidia_api_key_2:
+        nvidia_key = f"{keys.nvidia_api_key},{keys.nvidia_api_key_2}" if keys.nvidia_api_key else ""
+
+    free_providers: list[tuple[type, str, int | None, dict | None]] = [
+        (BlackboxProvider,    keys.blackbox_api_key,     None,      None),
+        (GroqProvider,        keys.groq_api_key,         500_000,
+            {"rpm": 30, "tpm": 6000, "tpd": 500_000}),
+        (GoogleProvider,      keys.google_ai_key,        None,
+            {"rpm": 15, "tpm": 1_000_000}),
+        (OpenRouterProvider,  keys.openrouter_api_key,   None,
+            {"rpm": 20}),
+        (TogetherProvider,    keys.together_api_key,     None,
+            {"rpm": 60}),
+        (MistralProvider,     keys.mistral_api_key,      None,      None),
+        (NVIDIAProvider,      nvidia_key,                None,
+            {"rpm": 40}),
+        # ── New providers ──────────────────────────────────────────────
+        (CerebrasProvider,    keys.cerebras_api_key,     None,
+            {"rpm": 30}),
+        (CohereProvider,      keys.cohere_api_key,       None,      None),
+        (GitHubModelsProvider, keys.github_models_token, None,
+            {"rpm": 15}),
+        (HuggingFaceProvider, keys.huggingface_api_key,  None,      None),
+        (ZaiProvider,         keys.zai_api_key,          None,      None),
     ]
 
-    paid_providers: list[tuple[type, str, int | None]] = []
+    # Cloudflare requires both key AND account_id
+    if keys.cloudflare_api_key and keys.cloudflare_account_id:
+        free_providers.append(
+            (CloudflareProvider, keys.cloudflare_api_key, None, {"rpm": 30})
+        )
+
+    paid_providers: list[tuple[type, str, int | None, dict | None]] = []
 
     if keys.openai_api_key:
-        from freerelay.providers.openai import OpenAIProvider
-
-        paid_providers.append((OpenAIProvider, keys.openai_api_key, None))
+        from freerelay.providers.openai import OpenAIProvider  # noqa: PLC0415
+        paid_providers.append((OpenAIProvider, keys.openai_api_key, None, None))
 
     if keys.anthropic_api_key:
-        from freerelay.providers.anthropic import AnthropicProvider
+        from freerelay.providers.anthropic import AnthropicProvider  # noqa: PLC0415
+        paid_providers.append((AnthropicProvider, keys.anthropic_api_key, None, None))
 
-        paid_providers.append((AnthropicProvider, keys.anthropic_api_key, None))
+    has_free = any(api_key for _, api_key, _, _ in free_providers)
+    has_paid = any(api_key for _, api_key, _, _ in paid_providers)
 
-    has_free = any(api_key for _, api_key, _ in free_providers)
-    has_paid = any(api_key for _, api_key, _ in paid_providers)
+    def _reg(provider_cls: type, api_key: str, daily_limit: int | None,
+             rate_limits: dict | None, tier: str) -> None:
+        if not api_key:
+            return
+        engine.register_provider(
+            provider=provider_cls(),
+            api_key=api_key,
+            daily_limit=daily_limit,
+            tier=tier,
+            rate_limits=rate_limits,
+        )
 
-    # Register providers based on mode
     if mode == "free":
-        # Only use free providers
-        for provider_cls, api_key, daily_limit in free_providers:
-            if api_key:
-                engine.register_provider(
-                    provider=provider_cls(),
-                    api_key=api_key,
-                    daily_limit=daily_limit,
-                    tier="free",
-                )
-                has_free = True
+        for pcls, ak, dl, rl in free_providers:
+            _reg(pcls, ak, dl, rl, "free")
+        has_free = any(ak for _, ak, _, _ in free_providers)
 
     elif mode == "paid":
-        # Only use paid providers
-        for provider_cls, api_key, daily_limit in paid_providers:
-            if api_key:
-                engine.register_provider(
-                    provider=provider_cls(),
-                    api_key=api_key,
-                    daily_limit=daily_limit,
-                    tier="paid",
-                )
+        for pcls, ak, dl, rl in paid_providers:
+            _reg(pcls, ak, dl, rl, "paid")
 
-    else:  # "auto" mode - use free by default, paid for complex tasks
-        # Register free providers first
-        for provider_cls, api_key, daily_limit in free_providers:
-            if api_key:
-                engine.register_provider(
-                    provider=provider_cls(),
-                    api_key=api_key,
-                    daily_limit=daily_limit,
-                    tier="free",
-                )
-                has_free = True
+    else:  # auto
+        for pcls, ak, dl, rl in free_providers:
+            _reg(pcls, ak, dl, rl, "free")
+        has_free = any(ak for _, ak, _, _ in free_providers)
+        for pcls, ak, dl, rl in paid_providers:
+            _reg(pcls, ak, dl, rl, "paid")
+        has_paid = any(ak for _, ak, _, _ in paid_providers)
 
-        # Also register paid providers for complex tasks
-        for provider_cls, api_key, daily_limit in paid_providers:
-            if api_key:
-                engine.register_provider(
-                    provider=provider_cls(),
-                    api_key=api_key,
-                    daily_limit=daily_limit,
-                    tier="paid",
-                )
-                has_paid = True
-
-    # If no API keys configured, add demo provider
     if not has_free and not has_paid:
-        from freerelay.providers.demo import DemoProvider
-
+        from freerelay.providers.demo import DemoProvider  # noqa: PLC0415
         engine.register_provider(
             provider=DemoProvider(),
             api_key="demo",
@@ -141,7 +166,6 @@ def _build_engine(settings: Settings) -> RoutingEngine:
         )
         logger.info("Running in DEMO mode (no API keys configured)")
 
-    # Log the mode
     if mode == "free":
         logger.info("Mode: FREE (using only free providers)")
     elif mode == "paid":
@@ -318,18 +342,22 @@ def create_app() -> FastAPI:
                 content=ChatCompletionResponse.error_body(f"Invalid request: {e}", 400),
             )
 
+        # Extract session ID from header for sticky-session routing
+        session_id: str | None = request.headers.get("X-Session-Id")
+
         logger.info(
             "request",
             extra={
                 "model": req.model or "auto",
                 "messages": len(req.messages),
                 "stream": req.is_streaming(),
+                "session_id": session_id,
             },
         )
 
         if req.is_streaming():
             return StreamingResponse(
-                engine.route_stream(req),
+                engine.route_stream(req, session_id=session_id),
                 media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
@@ -338,7 +366,7 @@ def create_app() -> FastAPI:
                 },
             )
 
-        response = await engine.route(req)
+        response = await engine.route(req, session_id=session_id)
 
         if "error" in response.model_dump():
             return JSONResponse(
@@ -346,6 +374,42 @@ def create_app() -> FastAPI:
             )
 
         return JSONResponse(content=response.model_dump(exclude_none=True))
+
+    @app.post("/v1/embeddings")
+    async def embeddings(request: Request) -> Response:
+        """
+        OpenAI-compatible embeddings endpoint.
+
+        Routes to the best available provider that supports embeddings
+        (Cohere, Mistral, HuggingFace, OpenAI, NVIDIA, Google).
+        """
+        from freerelay.core.models.embeddings import EmbeddingRequest  # noqa: PLC0415
+
+        engine = _engine
+        if not engine:
+            return JSONResponse(
+                status_code=503,
+                content={"error": {"message": "FreeRelay not initialized", "code": 503}},
+            )
+
+        try:
+            body = await request.body()
+            emb_req = EmbeddingRequest.model_validate_json(body)
+        except Exception as e:
+            return JSONResponse(
+                status_code=400,
+                content={"error": {"message": f"Invalid request: {e}", "code": 400}},
+            )
+
+        try:
+            response = await engine.embed(emb_req)
+            return JSONResponse(content=response.model_dump(exclude_none=True))
+        except Exception as e:
+            logger.exception("Embeddings error: %s", e)
+            return JSONResponse(
+                status_code=503,
+                content={"error": {"message": str(e), "code": 503}},
+            )
 
     @app.get("/v1/stats")
     async def stats() -> dict[str, object]:

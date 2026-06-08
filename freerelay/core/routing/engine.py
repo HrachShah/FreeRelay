@@ -23,6 +23,7 @@ from freerelay.core.intelligence.compressor import CompressionResult, PromptComp
 from freerelay.core.intelligence.context_optimizer import ContextOptimizer
 from freerelay.core.intelligence.profiler import WorkloadProfile, WorkloadProfiler
 from freerelay.core.models.capability import CapabilityMatrix
+from freerelay.core.models.embeddings import EmbeddingRequest, EmbeddingResponse
 from freerelay.core.models.openai import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -32,9 +33,12 @@ from freerelay.core.observability.outcome import OutcomeLogger, OutcomeRecord
 from freerelay.core.resilience.budget import BudgetForecaster
 from freerelay.core.resilience.chaos import ChaosInjector
 from freerelay.core.resilience.circuit_breaker import CircuitBreaker
+from freerelay.core.resilience.rate_ledger import RateLedger
 from freerelay.core.routing.policy import RoutingDirective, RoutingPolicy
 from freerelay.core.routing.scorer import compute_expected_utility
+from freerelay.core.routing.session_affinity import SessionAffinity
 from freerelay.providers.base import BaseProvider, ProviderError, RateLimitError
+from freerelay.providers.key_pool import KeyPool
 
 logger = logging.getLogger("freerelay.router")
 
@@ -42,7 +46,7 @@ logger = logging.getLogger("freerelay.router")
 @dataclass(slots=True)
 class ProviderSlot:
     provider: BaseProvider
-    api_key: str
+    key_pool: KeyPool          # replaces single api_key
     circuit: CircuitBreaker
     tier: str = "free"  # "free" or "paid"
     latency_p95_ms: float = 1000.0
@@ -51,6 +55,11 @@ class ProviderSlot:
     _latency_samples: list[float] = field(default_factory=list)
     _sorted_cache: list[float] | None = field(default=None, repr=False)
     _cache_dirty: bool = field(default=True, repr=False)
+
+    @property
+    def api_key(self) -> str:
+        """Compat shim: return the primary key for scorer/stats that expect a str."""
+        return self.key_pool.primary
 
     def record_latency(self, ms: float) -> None:
         self._latency_samples.append(ms)
@@ -90,6 +99,7 @@ class RequestContext:
     total_tokens: int
     schema_success_ratio: float
     tenant_tier: str
+    session_id: str | None = None
     policy_directive: RoutingDirective = field(default_factory=RoutingDirective)
 
     def policy_context(self) -> dict[str, Any]:
@@ -139,6 +149,13 @@ class RoutingEngine:
         self.validator = ValidatorChain()
         self.outcome_logger = OutcomeLogger()
         self.max_repair_attempts = settings.max_repair_attempts
+        # ── New: sticky sessions, per-provider rate ledger, embeddings ──
+        self.session_affinity = SessionAffinity(
+            ttl_secs=settings.session_affinity_ttl
+        )
+        self.rate_ledger = RateLedger()
+        from freerelay.core.routing.embeddings_router import EmbeddingsRouter  # noqa: PLC0415
+        self.embeddings_router = EmbeddingsRouter(self)
 
     def _load_capability_matrix(self, settings: Settings) -> CapabilityMatrix | None:
         if settings.capability_matrix_path:
@@ -176,10 +193,28 @@ class RoutingEngine:
     def register_provider(
         self,
         provider: BaseProvider,
-        api_key: str,
+        api_key: str | list[str],
         daily_limit: int | None = None,
         tier: str = "free",
+        rate_limits: dict[str, int | None] | None = None,
     ) -> None:
+        """
+        Register a provider slot.
+
+        *api_key* can be a single key string or a list of keys for round-robin.
+        Comma-separated strings (e.g. ``"key1,key2"``) are also accepted.
+
+        *rate_limits* is an optional dict with keys ``rpm``, ``rpd``, ``tpm``,
+        ``tpd`` — if provided it seeds the RateLedger for this provider.
+        """
+        if isinstance(api_key, str):
+            if "," in api_key:
+                pool = KeyPool.from_csv(api_key)
+            else:
+                pool = KeyPool([api_key])
+        else:
+            pool = KeyPool(api_key)
+
         circuit = CircuitBreaker(
             provider_name=provider.name,
             failure_threshold=self.settings.circuit_failure_threshold,
@@ -189,18 +224,42 @@ class RoutingEngine:
         self.slots.append(
             ProviderSlot(
                 provider=provider,
-                api_key=api_key,
+                key_pool=pool,
                 circuit=circuit,
                 tier=tier,
             )
         )
         if daily_limit is not None:
             self.budget.set_daily_limit(provider.name, daily_limit)
-        logger.info(f"Registered provider: {provider.name} (tier: {tier})")
+        if rate_limits:
+            self.rate_ledger.set_limits(
+                provider.name,
+                rpm=rate_limits.get("rpm"),
+                rpd=rate_limits.get("rpd"),
+                tpm=rate_limits.get("tpm"),
+                tpd=rate_limits.get("tpd"),
+            )
+        logger.info(
+            "Registered provider: %s (tier: %s, keys: %d)",
+            provider.name, tier, len(pool),
+        )
 
-    def _prepare_context(self, request: ChatCompletionRequest) -> RequestContext:
+    def _prepare_context(
+        self,
+        request: ChatCompletionRequest,
+        session_id: str | None = None,
+    ) -> RequestContext:
         profile = self.profiler.profile(request)
         bundle = self.context_optimizer.optimize(request)
+
+        # Derive session id if caller didn't provide one
+        if session_id is None:
+            msgs = [m.model_dump() for m in request.messages]
+            session_id = SessionAffinity.derive_session_id(
+                user_field=request.user,
+                messages=msgs,
+            )
+
         return RequestContext(
             request_id=f"req_{uuid.uuid4().hex[:12]}",
             original_request=request,
@@ -212,6 +271,7 @@ class RoutingEngine:
             total_tokens=bundle.total_tokens,
             schema_success_ratio=0.95,
             tenant_tier="bronze",
+            session_id=session_id,
         )
 
     def _build_policy_context(self, context: RequestContext) -> dict[str, Any]:
@@ -242,27 +302,42 @@ class RoutingEngine:
         # Determine which tier to prioritize
         preferred_tier = self._get_preferred_tier(context.workload_profile)
         has_paid = any(slot.tier == "paid" for slot in self.slots)
+        est_tokens = context.total_tokens or 100
 
         for slot in self.slots:
             if not await slot.circuit.can_execute():
                 continue
             if self.budget.is_budget_exhausted(slot.provider.name):
                 continue
+            # Rate ledger check (hard caps)
+            if not self.rate_ledger.can_use(slot.provider.name, est_tokens):
+                logger.debug("%s skipped: rate limit exceeded", slot.provider.name)
+                continue
 
             # In auto mode, filter by tier preference
-            # If we have paid providers and this is a complex task, prefer paid
-            # Otherwise, prefer free
             if has_paid:
                 if slot.tier == preferred_tier or (
                     preferred_tier == "paid" and slot.tier == "paid"
                 ):
-                    available.insert(0, slot)  # Higher priority
+                    available.insert(0, slot)
                 elif slot.tier == "free":
-                    available.append(slot)  # Fallback
+                    available.append(slot)
             else:
                 available.append(slot)
 
             candidate_names.append(slot.provider.name)
+
+        # Session affinity: bump the affinied provider to the front
+        if context.session_id:
+            affinied = self.session_affinity.get(context.session_id)
+            if affinied:
+                for i, slot in enumerate(available):
+                    if slot.provider.name == affinied:
+                        available.insert(0, available.pop(i))
+                        logger.debug(
+                            "Session %s pinned to %s", context.session_id, affinied
+                        )
+                        break
 
         policy_order, directive = self.routing_policy.apply(
             self._build_policy_context(context),
@@ -301,8 +376,9 @@ class RoutingEngine:
     async def route(
         self,
         request: ChatCompletionRequest,
+        session_id: str | None = None,
     ) -> ChatCompletionResponse:
-        context = self._prepare_context(request)
+        context = self._prepare_context(request, session_id=session_id)
         ranked, directive = await self._ranked_slots(context)
 
         if not ranked:
@@ -339,7 +415,11 @@ class RoutingEngine:
                 slot.request_count += 1
                 tokens = response.usage.total_tokens if response.usage else 0
                 self.budget.record_tokens(provider.name, tokens)
+                self.rate_ledger.record(provider.name, tokens)
                 context.schema_success_ratio = 0.99 if validation.schema_pass else 0.7
+                # Pin session affinity on success
+                if context.session_id:
+                    self.session_affinity.pin(context.session_id, provider.name)
 
                 alternatives = [
                     name for name in provider_names if name != provider.name
@@ -364,11 +444,16 @@ class RoutingEngine:
                 )
                 return response
 
-            except RateLimitError:
+            except RateLimitError as rle:
                 await slot.circuit.record_failure(429)
                 slot.error_count += 1
+                # Cool down the specific key that was used
+                slot.key_pool.cooldown(slot.key_pool.primary)
+                # Clear session affinity so the next request picks a different provider
+                if context.session_id:
+                    self.session_affinity.clear(context.session_id)
                 logger.warning("%s rate limited", provider.name)
-                last_error = RateLimitError(provider_name=provider.name)
+                last_error = rle
                 continue
 
             except ProviderError as e:
@@ -404,8 +489,9 @@ class RoutingEngine:
     async def route_stream(
         self,
         request: ChatCompletionRequest,
+        session_id: str | None = None,
     ) -> Any:
-        context = self._prepare_context(request)
+        context = self._prepare_context(request, session_id=session_id)
         ranked, _ = await self._ranked_slots(context)
 
         if not ranked:
@@ -419,16 +505,20 @@ class RoutingEngine:
 
             try:
                 await self.chaos.maybe_inject(provider.name)
-                async for line in provider.stream(
-                    context.optimized_request, slot.api_key
-                ):
+                key = slot.key_pool.next()
+                async for line in provider.stream(context.optimized_request, key):
                     yield line
 
+                if context.session_id:
+                    self.session_affinity.pin(context.session_id, provider.name)
                 return
 
             except RateLimitError:
                 await slot.circuit.record_failure(429)
+                slot.key_pool.cooldown(slot.key_pool.primary)
                 slot.error_count += 1
+                if context.session_id:
+                    self.session_affinity.clear(context.session_id)
                 logger.warning("%s rate limited (stream)", provider.name)
                 continue
 
@@ -461,8 +551,9 @@ class RoutingEngine:
         elapsed_ms = 0.0
 
         for attempt in range(self.max_repair_attempts + 1):
+            key = slot.key_pool.next()
             start = time.time()
-            response = await slot.provider.complete(attempt_request, slot.api_key)
+            response = await slot.provider.complete(attempt_request, key)
             elapsed_ms = (time.time() - start) * 1000
             validation = self.validator.validate(response, directive)
 
@@ -525,15 +616,25 @@ class RoutingEngine:
             )
         )
 
+    async def embed(
+        self,
+        request: EmbeddingRequest,
+        session_id: str | None = None,
+    ) -> EmbeddingResponse:
+        """Route an embedding request via the EmbeddingsRouter."""
+        return await self.embeddings_router.embed(request)
+
     def get_stats(self) -> list[dict[str, object]]:
         return [
             {
                 "name": slot.provider.name,
                 "circuit": slot.circuit.to_dict(),
                 "budget": self.budget.get_stats(slot.provider.name),
+                "rate_limits": self.rate_ledger.stats(slot.provider.name),
                 "latency_p95_ms": round(slot.latency_p95_ms, 1),
                 "request_count": slot.request_count,
                 "error_count": slot.error_count,
+                "key_count": len(slot.key_pool),
             }
             for slot in self.slots
         ]

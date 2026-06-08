@@ -84,6 +84,11 @@ def _setup_env_interactive() -> None:
         "OPENROUTER_API_KEY": "OpenRouter (https://openrouter.ai/keys)",
         "TOGETHER_API_KEY": "Together AI (https://api.together.xyz)",
         "MISTRAL_API_KEY": "Mistral (https://console.mistral.ai/api-keys)",
+        "CEREBRAS_API_KEY": "Cerebras (https://cloud.cerebras.ai/)",
+        "COHERE_API_KEY": "Cohere (https://dashboard.cohere.com/api-keys)",
+        "GITHUB_MODELS_TOKEN": "GitHub Models (GitHub PAT — github.com/settings/tokens)",
+        "HUGGINGFACE_API_KEY": "HuggingFace (https://huggingface.co/settings/tokens)",
+        "ZAI_API_KEY": "Z.ai / Zhipu GLM (https://open.bigmodel.cn/)",
     }
 
     paid_keys = {
@@ -274,6 +279,88 @@ def setup() -> None:
     """Interactive setup to add API keys."""
     _setup_env_interactive()
     console.print("[green]Setup complete! Run [bold]freerelay[/bold] to start.[/green]")
+
+
+keys_app = typer.Typer(name="keys", help="Manage encrypted API key store.")
+app.add_typer(keys_app)
+
+
+@keys_app.command("set")
+def keys_set(
+    env_var: str = typer.Argument(..., help="Env var name, e.g. GROQ_API_KEY"),
+    value: str = typer.Argument(..., help="Key value"),
+) -> None:
+    """Store a key in the encrypted keystore."""
+    from freerelay.shared.security.keystore import KeyStore
+
+    store = KeyStore()
+    store.load()  # load existing
+    store.set(env_var, value)
+    if store.save():
+        console.print(f"[green]✓ Saved {env_var} to encrypted keystore.[/green]")
+        console.print(
+            "[dim]Set FREERELAY_MASTER_KEY or FREERELAY_MASTER_PASSPHRASE "
+            "in your environment to enable encryption.[/dim]"
+        )
+    else:
+        console.print(
+            "[yellow]⚠ No master key configured — key not saved to encrypted store.[/yellow]\n"
+            "[dim]Set FREERELAY_MASTER_KEY=<64-hex-chars> or "
+            "FREERELAY_MASTER_PASSPHRASE=<passphrase> and retry.[/dim]"
+        )
+
+
+@keys_app.command("list")
+def keys_list() -> None:
+    """List stored keys (values masked)."""
+    from freerelay.shared.security.keystore import KeyStore
+
+    store = KeyStore()
+    store.load()
+    masked = store.list_masked()
+
+    if not masked:
+        console.print("[dim]No keys stored in encrypted keystore.[/dim]")
+        return
+
+    from rich.table import Table
+
+    table = Table(title="Encrypted Keystore")
+    table.add_column("Variable", style="cyan")
+    table.add_column("Value (masked)", style="dim")
+    for k, v in sorted(masked.items()):
+        table.add_row(k, v)
+    console.print(table)
+
+
+@keys_app.command("remove")
+def keys_remove(
+    env_var: str = typer.Argument(..., help="Env var name to remove"),
+) -> None:
+    """Remove a key from the encrypted keystore."""
+    from freerelay.shared.security.keystore import KeyStore
+
+    store = KeyStore()
+    store.load()
+    if store.remove(env_var):
+        store.save()
+        console.print(f"[green]✓ Removed {env_var}.[/green]")
+    else:
+        console.print(f"[yellow]{env_var} not found in keystore.[/yellow]")
+
+
+@keys_app.command("generate-master")
+def keys_generate_master() -> None:
+    """Generate a random master key (print once — save it securely!)."""
+    from freerelay.shared.security.keystore import KeyStore
+
+    key = KeyStore.generate_master_key()
+    console.print(
+        f"[bold cyan]Master key (store safely — you cannot recover encrypted keys without it):[/bold cyan]\n"
+        f"[green]{key}[/green]\n\n"
+        "Add to your environment:\n"
+        f"  [dim]FREERELAY_MASTER_KEY={key}[/dim]"
+    )
 
 
 # Default command - just run "freerelay" without any subcommand
