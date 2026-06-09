@@ -120,6 +120,12 @@ class BaseProvider(ABC):
         """
         data = request.model_dump(exclude_none=True)
 
+        # Gateway-level aliases ("auto", "freerelay-*") are routing hints, not
+        # upstream model ids — drop them so the provider default applies.
+        model = data.get("model", "")
+        if model == "auto" or model.startswith("freerelay-"):
+            data.pop("model", None)
+
         if "logprobs" not in self.supported_features:
             data.pop("logprobs", None)
             data.pop("top_logprobs", None)
