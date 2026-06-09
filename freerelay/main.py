@@ -68,9 +68,12 @@ def _build_engine(settings: Settings) -> RoutingEngine:
     from freerelay.providers.google import GoogleProvider
     from freerelay.providers.groq import GroqProvider
     from freerelay.providers.huggingface import HuggingFaceProvider
+    from freerelay.providers.kilo import KiloProvider
+    from freerelay.providers.llm7 import LLM7Provider
     from freerelay.providers.mistral import MistralProvider
     from freerelay.providers.nvidia import NVIDIAProvider
     from freerelay.providers.openrouter import OpenRouterProvider
+    from freerelay.providers.pollinations import PollinationsProvider
     from freerelay.providers.together import TogetherProvider
     from freerelay.providers.zai import ZaiProvider
 
@@ -155,6 +158,23 @@ def _build_engine(settings: Settings) -> RoutingEngine:
         for pcls, ak, dl, rl in paid_providers:
             _reg(pcls, ak, dl, rl, "paid")
         has_paid = any(ak for _, ak, _, _ in paid_providers)
+
+    # ── Anonymous providers (no API key required, always registered) ──────
+    # Pollinations (~200 req/hr), LLM7 (100 req/hr), Kilo Gateway (:free routes)
+    if mode != "paid":
+        for anon_cls, rpm in [
+            (PollinationsProvider, 200),
+            (LLM7Provider, 100),
+            (KiloProvider, 200),
+        ]:
+            engine.register_provider(
+                provider=anon_cls(),
+                api_key="anon",
+                daily_limit=None,
+                tier="free",
+                rate_limits={"rpm": rpm},
+            )
+        has_free = True
 
     if not has_free and not has_paid:
         from freerelay.providers.demo import DemoProvider  # noqa: PLC0415
