@@ -8,6 +8,7 @@ from .groq import GroqProvider
 from .kilo import KiloProvider
 from .llm7 import LLM7Provider
 from .mistral import MistralProvider
+from .ollama_cloud import OllamaCloudProvider
 from .nvidia import NVIDIAProvider
 from .openai import OpenAIProvider
 from .opencode import OpenCodeProvider
@@ -24,6 +25,7 @@ __all__ = [
     "KiloProvider",
     "LLM7Provider",
     "MistralProvider",
+    "OllamaCloudProvider",
     "NVIDIAProvider",
     "OpenAIProvider",
     "OpenCodeProvider",

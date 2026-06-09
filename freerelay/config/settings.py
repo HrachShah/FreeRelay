@@ -34,6 +34,7 @@ class ProviderKeys(BaseSettings):
     cloudflare_account_id: str = ""  # Required for Cloudflare Workers AI
     github_models_token: str = ""    # GitHub PAT (classic or fine-grained)
     huggingface_api_key: str = ""
+    ollama_cloud_api_key: str = ""   # Free key from https://ollama.com (Settings → API Keys)
     zai_api_key: str = ""
 
     # Paid/premium API keys (optional)

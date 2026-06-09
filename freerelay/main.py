@@ -71,6 +71,7 @@ def _build_engine(settings: Settings) -> RoutingEngine:
     from freerelay.providers.kilo import KiloProvider
     from freerelay.providers.llm7 import LLM7Provider
     from freerelay.providers.mistral import MistralProvider
+    from freerelay.providers.ollama_cloud import OllamaCloudProvider
     from freerelay.providers.nvidia import NVIDIAProvider
     from freerelay.providers.openrouter import OpenRouterProvider
     from freerelay.providers.pollinations import PollinationsProvider
@@ -108,6 +109,7 @@ def _build_engine(settings: Settings) -> RoutingEngine:
         (GitHubModelsProvider, keys.github_models_token, None,
             {"rpm": 15}),
         (HuggingFaceProvider, keys.huggingface_api_key,  None,      None),
+        (OllamaCloudProvider, keys.ollama_cloud_api_key, None,      None),
         (ZaiProvider,         keys.zai_api_key,          None,      None),
     ]
 
