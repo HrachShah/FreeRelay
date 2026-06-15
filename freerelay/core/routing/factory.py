@@ -76,6 +76,7 @@ def create_routing_engine(settings: Settings) -> RoutingEngine:
                     daily_limit=daily_limit,
                     tier="paid",
                 )
+                has_paid = True
 
     else:  # "auto" mode - use free by default, paid for complex tasks
         # Register free providers first
