@@ -12,6 +12,14 @@ import time
 from dataclasses import dataclass, field
 
 
+def _next_midnight_utc(now: float) -> float:
+    """Return the unix timestamp of the next 00:00 UTC strictly after `now`."""
+    # 86400 seconds in a day; compute seconds since the most recent midnight UTC
+    seconds_in_day = 86_400.0
+    secs_today = now % seconds_in_day
+    return now + (seconds_in_day - secs_today)
+
+
 @dataclass
 class BudgetState:
     """Token budget state for a single provider/key."""
@@ -20,7 +28,7 @@ class BudgetState:
     tokens_used_this_minute: int = 0
     ewma_rate: float = 0.0  # tokens per minute
     last_updated_ts: float = field(default_factory=time.time)
-    daily_reset_ts: float = 0.0  # next midnight UTC
+    daily_reset_ts: float = field(default_factory=lambda: _next_midnight_utc(time.time()))
     daily_limit: int | None = None  # None = unlimited
 
 
@@ -59,6 +67,14 @@ class BudgetForecaster:
         """Record token usage after a request completes."""
         state = self._get_state(provider)
         now = time.time()
+
+        # Check if we've crossed a daily reset boundary (midnight UTC).
+        # Without this, tokens_used_today keeps accumulating across days
+        # and is_budget_exhausted() reports the provider as exhausted
+        # forever once the limit is first hit.
+        if now >= state.daily_reset_ts:
+            state.tokens_used_today = 0
+            state.daily_reset_ts = _next_midnight_utc(now)
 
         # Check if we've crossed one or more minute boundaries
         elapsed = now - state.last_updated_ts
@@ -132,3 +148,4 @@ class BudgetForecaster:
         state = self._get_state(provider)
         state.tokens_used_today = 0
         state.tokens_used_this_minute = 0
+        state.daily_reset_ts = _next_midnight_utc(time.time())
