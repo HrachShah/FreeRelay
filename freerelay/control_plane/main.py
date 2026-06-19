@@ -116,7 +116,7 @@ class ControlPlane:
 
         except asyncio.CancelledError:
             raise
-        except Exception:
+        except (aioredis.RedisError, AssertionError, ValueError, TypeError):
             logger.exception("tick_error")
         finally:
             # Sleep remainder of tick interval
@@ -142,7 +142,7 @@ class ControlPlane:
                     await self._redis.xack(
                         "freerelay:outcomes", "control-plane-learner", msg_id
                     )
-        except Exception:
+        except aioredis.RedisError:
             logger.exception("consume_outcomes_error")
         return outcomes
 
@@ -199,7 +199,7 @@ class ControlPlane:
                     },
                 )
 
-            except Exception:
+            except (aioredis.RedisError, ValueError, TypeError):
                 logger.exception(
                     "bandit_update_error provider=%s", outcome.get("provider_chosen")
                 )
@@ -254,7 +254,7 @@ class ControlPlane:
                         "1",
                     )
 
-            except Exception:
+            except (aioredis.RedisError, ValueError, TypeError):
                 logger.exception("anomaly_detection_error key=%s", key)
 
     async def _publish_policy(self) -> None:
@@ -272,7 +272,7 @@ class ControlPlane:
                 logger.info(
                     "policy_published version=%s", policy.get("version", "unknown")
                 )
-        except Exception:
+        except (aioredis.RedisError, json.JSONDecodeError):
             logger.exception("policy_publish_error")
 
 
