@@ -166,7 +166,11 @@ async def fetch_opencode_models(api_key: str = "") -> list[dict[str, str]]:
                         }
                     )
             return models
-    except Exception:
+    except httpx.RequestError:
+        pass
+    except (ValueError, TypeError):
+        pass
+    except AttributeError:
         pass
 
     # Fallback: return known free model
