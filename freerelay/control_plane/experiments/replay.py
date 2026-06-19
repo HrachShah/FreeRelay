@@ -148,7 +148,7 @@ class ReplayEngine:
 
             logger.info("replay_loaded_outcomes count=%d", len(records))
 
-        except Exception:
+        except (aioredis.RedisError, ValueError, TypeError):
             logger.exception("load_outcomes_error")
 
         return records
