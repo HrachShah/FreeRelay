@@ -178,6 +178,23 @@ def _build_engine(settings: Settings) -> RoutingEngine:
             )
         has_free = True
 
+    # ── Catalog providers (data-driven, non-hand-written providers) ──────────
+    if mode != "paid":
+        try:
+            from freerelay.providers.catalog import build_catalog_providers  # noqa: PLC0415
+            for cat_cls, cat_key, cat_dl, cat_rl, cat_tier in build_catalog_providers():
+                engine.register_provider(
+                    provider=cat_cls(),
+                    api_key=cat_key,
+                    daily_limit=cat_dl,
+                    tier=cat_tier,
+                    rate_limits=cat_rl,
+                )
+                if cat_tier == "free":
+                    has_free = True
+        except Exception as _e:
+            logger.warning("Catalog load failed: %s", _e)
+
     if not has_free and not has_paid:
         from freerelay.providers.demo import DemoProvider  # noqa: PLC0415
         engine.register_provider(

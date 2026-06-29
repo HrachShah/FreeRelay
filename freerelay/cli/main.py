@@ -281,6 +281,98 @@ def setup() -> None:
     console.print("[green]Setup complete! Run [bold]freerelay[/bold] to start.[/green]")
 
 
+@app.command()
+def probe(
+    catalog: bool = typer.Option(False, "--catalog", help="Probe every provider in providers.yaml"),
+    timeout: float = typer.Option(8.0, "--timeout", help="Per-provider timeout in seconds"),
+) -> None:
+    """Probe provider health. --catalog checks all catalog entries and stamps last_verified."""
+    import asyncio
+    import datetime
+    from pathlib import Path
+
+    import httpx
+    import yaml
+
+    catalog_path = Path(__file__).parent.parent / "config" / "providers.yaml"
+
+    if not catalog:
+        # quick local check
+        try:
+            resp = httpx.get("http://localhost:8000/health", timeout=3)
+            console.print(f"[green]Gateway: {resp.status_code}[/green]")
+        except Exception:
+            console.print("[red]Gateway not reachable (start with: freerelay)[/red]")
+        return
+
+    if not catalog_path.exists():
+        console.print(f"[red]Catalog not found: {catalog_path}[/red]")
+        raise typer.Exit(1)
+
+    with catalog_path.open() as fh:
+        data = yaml.safe_load(fh)
+    entries = data.get("providers", [])
+
+    from rich.table import Table
+    table = Table(title="Provider Catalog Health", show_lines=False)
+    table.add_column("ID", style="cyan", min_width=20)
+    table.add_column("Status", min_width=8)
+    table.add_column("Latency", justify="right")
+    table.add_column("Notes", style="dim")
+
+    today = datetime.date.today().isoformat()
+
+    async def _probe_one(entry: dict) -> tuple[str, str, str, str]:
+        pid = entry.get("id", "?")
+        base = entry.get("base_url", "")
+        env_key = entry.get("env_key", "")
+        perm_free = entry.get("permanently_free", False)
+        api_key = "anon" if perm_free else __import__("os").environ.get(env_key, "")
+
+        if not api_key:
+            return pid, "[dim]SKIP[/dim]", "-", "no key"
+
+        # Use /models as a lightweight probe — no token cost
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        auth = entry.get("auth_header", "Bearer")
+        if auth != "none":
+            headers[auth] = api_key
+
+        url = f"{base}/models"
+        start = asyncio.get_event_loop().time()
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                r = await client.get(url, headers=headers)
+            ms = (asyncio.get_event_loop().time() - start) * 1000
+            if r.status_code < 400:
+                return pid, "[green]OK[/green]", f"{ms:.0f}ms", ""
+            return pid, f"[yellow]{r.status_code}[/yellow]", f"{ms:.0f}ms", r.text[:60]
+        except Exception as exc:
+            return pid, "[red]FAIL[/red]", "-", str(exc)[:60]
+
+    async def _run_all() -> list[tuple[str, str, str, str]]:
+        return await asyncio.gather(*[_probe_one(e) for e in entries])
+
+    results = asyncio.run(_run_all())
+
+    ok_ids = set()
+    for pid, status, lat, note in results:
+        table.add_row(pid, status, lat, note)
+        if "OK" in status:
+            ok_ids.add(pid)
+
+    # Stamp last_verified for passing providers
+    for entry in entries:
+        if entry.get("id") in ok_ids:
+            entry["last_verified"] = today
+
+    with catalog_path.open("w") as fh:
+        yaml.dump(data, fh, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+    console.print(table)
+    console.print(f"\n[green]{len(ok_ids)}/{len(entries)}[/green] providers healthy — last_verified stamped.")
+
+
 keys_app = typer.Typer(name="keys", help="Manage encrypted API key store.")
 app.add_typer(keys_app)
 
