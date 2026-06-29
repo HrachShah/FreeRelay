@@ -1,0 +1,567 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FreeRelay — Route Any LLM Request. Free First.</title>
+<meta name="description" content="Self-hosted AI gateway with 22+ providers, smart routing, and 55%+ token compression. Zero vendor lock-in." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --purple: #8b5cf6;
+    --cyan: #06b6d4;
+    --pink: #ec4899;
+  }
+  * { -webkit-font-smoothing: antialiased; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: #e5e7eb;
+    overflow-x: hidden;
+  }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Animated background grid */
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(139, 92, 246, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(6, 182, 212, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    pointer-events: none;
+  }
+
+  /* Floating orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.4;
+    z-index: 0;
+    pointer-events: none;
+    animation: float 20s ease-in-out infinite;
+  }
+  .orb-1 { width: 500px; height: 500px; background: var(--purple); top: -10%; left: -10%; }
+  .orb-2 { width: 400px; height: 400px; background: var(--cyan); top: 30%; right: -10%; animation-delay: -7s; }
+  .orb-3 { width: 350px; height: 350px; background: var(--pink); bottom: -10%; left: 30%; animation-delay: -14s; opacity: 0.2; }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 30px) scale(0.9); }
+  }
+
+  /* Animated gradient text */
+  .gradient-text {
+    background: linear-gradient(90deg, #8b5cf6, #06b6d4, #8b5cf6);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 4s linear infinite;
+  }
+  @keyframes shimmer {
+    to { background-position: 200% center; }
+  }
+
+  /* Glassmorphism */
+  .glass {
+    background: rgba(20, 20, 30, 0.5);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+  }
+  .glass-gradient {
+    position: relative;
+    background: rgba(20, 20, 30, 0.5);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .glass-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(6, 182, 212, 0.3), rgba(139, 92, 246, 0.1));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .glass-gradient:hover::before {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(6, 182, 212, 0.6), rgba(139, 92, 246, 0.3));
+  }
+  .glass-gradient {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .glass-gradient:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px -10px rgba(139, 92, 246, 0.3);
+  }
+
+  /* Primary CTA */
+  .btn-primary {
+    background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+    color: white;
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .btn-primary:hover::after { opacity: 1; }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(139, 92, 246, 0.6);
+  }
+  .btn-primary > span { position: relative; z-index: 1; }
+
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: white;
+    transition: all 0.3s ease;
+  }
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(139, 92, 246, 0.5);
+  }
+
+  /* Marquee */
+  .marquee {
+    display: flex;
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+  }
+  .marquee-track {
+    display: flex;
+    gap: 1rem;
+    animation: scroll 40s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  .provider-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    background: rgba(20, 20, 30, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid;
+    white-space: nowrap;
+    font-weight: 500;
+    transition: transform 0.3s ease;
+  }
+  .provider-pill:hover { transform: scale(1.05); }
+
+  /* Code block */
+  .code-block {
+    background: #0d0d14;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875rem;
+    overflow-x: auto;
+  }
+  .code-window-controls span {
+    display: inline-block;
+    width: 12px; height: 12px; border-radius: 50%;
+    margin-right: 6px;
+  }
+  .tk-kw { color: #c084fc; }
+  .tk-str { color: #67e8f9; }
+  .tk-fn { color: #fbbf24; }
+  .tk-com { color: #6b7280; font-style: italic; }
+  .tk-var { color: #e5e7eb; }
+  .tk-num { color: #f472b6; }
+
+  /* Counter */
+  .stat-number {
+    background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Timeline connector */
+  .timeline-line {
+    background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+  }
+
+  /* Fade-in on scroll */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Nav blur on scroll */
+  .nav-scrolled {
+    background: rgba(10, 10, 15, 0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Pulse */
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.5); }
+    100% { box-shadow: 0 0 0 20px rgba(139, 92, 246, 0); }
+  }
+  .pulse-dot {
+    animation: pulse-ring 2s infinite;
+  }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.section { padding: 96px 24px; }
+.section-title { text-align: center; font-size: 2.25rem; font-weight: 700; color: #fff; margin-bottom: 48px; }
+
+.stats-bar { background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); padding: 48px 24px; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; text-align: center; max-width: 1200px; margin: 0 auto; }
+.stat-number { font-size: 3rem; font-weight: 800; background: linear-gradient(135deg, #8b5cf6, #06b6d4); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.stat-label { color: #9ca3af; font-size: 0.875rem; margin-top: 4px; }
+
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.feature-card { padding: 32px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(12px); }
+.feature-icon { font-size: 2.5rem; margin-bottom: 16px; }
+.feature-card h3 { font-size: 1.2rem; font-weight: 600; color: #fff; margin-bottom: 8px; }
+.feature-card p { color: #9ca3af; line-height: 1.7; }
+
+.subheadline { color: #9ca3af; font-size: 1.25rem; max-width: 600px; margin: 24px auto; line-height: 1.7; text-align: center; }
+.cta-group { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 40px; }
+.btn-large { padding: 16px 32px; font-size: 1rem; font-weight: 600; border-radius: 12px; border: none; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.2s; }
+
+.providers-section { padding: 48px 24px; overflow: hidden; }
+
+.how-it-works { padding: 96px 24px; text-align: center; }
+.steps { display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; margin-top: 64px; }
+.step { max-width: 260px; text-align: center; }
+.step-number { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #8b5cf6, #06b6d4); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.25rem; color: #fff; margin: 0 auto 16px; }
+.step h3 { color: #fff; font-weight: 600; margin-bottom: 8px; }
+.step p { color: #6b7280; font-size: 0.9rem; line-height: 1.6; }
+
+.code-section { padding: 96px 24px; }
+.code-window-header { display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.code-body { padding: 24px; }
+.code-line { display: block; margin-bottom: 4px; }
+
+.pricing { padding: 96px 24px; }
+.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1000px; margin: 0 auto; }
+.pricing-card { padding: 40px; border-radius: 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(12px); }
+.pricing-card.featured { border-color: rgba(139,92,246,0.5); box-shadow: 0 0 40px rgba(139,92,246,0.2); }
+.price { font-size: 3rem; font-weight: 800; color: #fff; margin: 16px 0 4px; }
+.price-period { color: #6b7280; font-size: 0.9rem; }
+.pricing-features { list-style: none; margin: 24px 0; padding: 0; }
+.pricing-features li { color: #9ca3af; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.pricing-features li::before { content: "✓"; color: #8b5cf6; font-weight: 700; }
+.pricing-cta { display: block; text-align: center; padding: 14px; border-radius: 10px; font-weight: 600; margin-top: 32px; transition: all 0.2s; text-decoration: none; color: #fff; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+.pricing-cta:hover { background: rgba(139,92,246,0.2); border-color: rgba(139,92,246,0.5); }
+
+.footer { padding: 48px 24px; border-top: 1px solid rgba(255,255,255,0.06); text-align: center; color: #4b5563; }
+.footer-links { display: flex; justify-content: center; gap: 24px; margin-top: 12px; }
+.footer-links a { color: #6b7280; text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: #fff; }
+
+@media (max-width: 768px) {
+  .section { padding: 64px 20px; }
+  .section-title { font-size: 1.875rem; margin-bottom: 32px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 32px; }
+  .features-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .stat-number { font-size: 2.25rem; }
+}
+</style>
+</head>
+<body class="relative">
+
+<div class="bg-grid"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- NAV -->
+<nav id="nav" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2 text-xl font-bold">
+      <span class="text-2xl">⚡</span>
+      <span class="text-white">FreeRelay</span>
+    </a>
+    <div class="hidden md:flex items-center gap-8 text-sm text-gray-300">
+      <a href="#features" class="hover:text-white transition">Features</a>
+      <a href="#providers" class="hover:text-white transition">Providers</a>
+      <a href="#pricing" class="hover:text-white transition">Pricing</a>
+      <a href="https://github.com" class="hover:text-white transition">GitHub</a>
+    </div>
+    <a href="#pricing" class="btn-primary px-5 py-2.5 rounded-lg text-sm font-semibold">
+      <span>Get Started Free</span>
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="relative z-10 pt-40 pb-24 px-6">
+  <div class="max-w-5xl mx-auto text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass mb-8 text-xs font-medium text-gray-300">
+      <span class="relative flex h-2 w-2">
+        <span class="absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75 animate-ping"></span>
+        <span class="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+      </span>
+      New v2.0 — 22+ providers &amp; token compression</div>
+
+            <h1 class="gradient-text reveal">Route Any LLM Request.<br>Free First.</h1>
+            <p class="subheadline reveal">Self-hosted AI gateway with 22+ providers, smart routing, and 55%+ token compression. Zero vendor lock-in.</p>
+            <div class="cta-group reveal">
+                <a href="#deploy" class="btn-primary btn-large">Deploy in 60 Seconds</a>
+                <a href="https://github.com/freerelay" class="btn-secondary">View on GitHub</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats-bar">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-number gradient-text">22+</div>
+                    <div class="stat-label">Providers</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number gradient-text">55%</div>
+                    <div class="stat-label">Token Savings</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number gradient-text">&lt;5ms</div>
+                    <div class="stat-label">Routing Latency</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number gradient-text">0</div>
+                    <div class="stat-label">Config Files Needed</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="section">
+        <div class="container">
+            <h2 class="section-title reveal">Everything You Need. Nothing You Don't.</h2>
+            <div class="features-grid">
+                <div class="glass-gradient feature-card reveal">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Smart Routing</h3>
+                    <p>Profiles every request in under 5ms and routes to the optimal provider based on cost, latency, and capability.</p>
+                </div>
+                <div class="glass-gradient feature-card reveal">
+                    <div class="feature-icon">🗜️</div>
+                    <h3>Token Compression</h3>
+                    <p>Built-in prompt compression slashes token usage by 55%+ without sacrificing response quality.</p>
+                </div>
+                <div class="glass-gradient feature-card reveal">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Circuit Breakers</h3>
+                    <p>Automatic failover when providers rate-limit or go down. Your app never sees a 429 again.</p>
+                </div>
+                <div class="glass-gradient feature-card reveal">
+                    <div class="feature-icon">🔌</div>
+                    <h3>OpenAI Compatible</h3>
+                    <p>Drop-in replacement for the OpenAI SDK. Change one line, gain 22 providers.</p>
+                </div>
+                <div class="glass-gradient feature-card reveal">
+                    <div class="feature-icon">📋</div>
+                    <h3>Provider Catalog</h3>
+                    <p>Curated registry of free-tier models with live capability metadata and quota tracking.</p>
+                </div>
+                <div class="glass-gradient feature-card reveal">
+                    <div class="feature-icon">🌊</div>
+                    <h3>Real-time Streaming</h3>
+                    <p>Native SSE streaming across every provider, normalized to a single consistent format.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="providers" class="section">
+        <div class="container">
+            <h2 class="section-title reveal">Works With Everything</h2>
+            <p class="section-subtitle reveal">One API. Every major free-tier LLM provider.</p>
+        </div>
+        <div class="marquee reveal">
+            <div class="marquee-track">
+                <span class="provider-pill" style="border-color:#10b981">Groq</span>
+                <span class="provider-pill" style="border-color:#3b82f6">Google Gemini</span>
+                <span class="provider-pill" style="border-color:#f97316">Mistral</span>
+                <span class="provider-pill" style="border-color:#a855f7">Together AI</span>
+                <span class="provider-pill" style="border-color:#ef4444">Cerebras</span>
+                <span class="provider-pill" style="border-color:#f97316">Cloudflare</span>
+                <span class="provider-pill" style="border-color:#6b7280">Ollama</span>
+                <span class="provider-pill" style="border-color:#06b6d4">Blackbox AI</span>
+                <span class="provider-pill" style="border-color:#10b981">OpenAI</span>
+                <span class="provider-pill" style="border-color:#22c55e">NVIDIA</span>
+                <span class="provider-pill" style="border-color:#eab308">HuggingFace</span>
+                <span class="provider-pill" style="border-color:#ec4899">Pollinations</span>
+                <span class="provider-pill" style="border-color:#8b5cf6">LLM7</span>
+                <span class="provider-pill" style="border-color:#10b981">Groq</span>
+                <span class="provider-pill" style="border-color:#3b82f6">Google Gemini</span>
+                <span class="provider-pill" style="border-color:#f97316">Mistral</span>
+                <span class="provider-pill" style="border-color:#a855f7">Together AI</span>
+                <span class="provider-pill" style="border-color:#ef4444">Cerebras</span>
+                <span class="provider-pill" style="border-color:#f97316">Cloudflare</span>
+                <span class="provider-pill" style="border-color:#6b7280">Ollama</span>
+                <span class="provider-pill" style="border-color:#06b6d4">Blackbox AI</span>
+                <span class="provider-pill" style="border-color:#10b981">OpenAI</span>
+                <span class="provider-pill" style="border-color:#22c55e">NVIDIA</span>
+                <span class="provider-pill" style="border-color:#eab308">HuggingFace</span>
+                <span class="provider-pill" style="border-color:#ec4899">Pollinations</span>
+                <span class="provider-pill" style="border-color:#8b5cf6">LLM7</span>
+            </div>
+        </div>
+    </section>
+
+    <section id="how" class="section">
+        <div class="container">
+            <h2 class="section-title reveal">How It Works</h2>
+            <div class="steps-grid">
+                <div class="step reveal">
+                    <div class="step-number gradient-text">1</div>
+                    <h3>Point Your Client</h3>
+                    <p>Set your base URL to <code>localhost:8000</code>. That's it.</p>
+                </div>
+                <div class="step reveal">
+                    <div class="step-number gradient-text">2</div>
+                    <h3>FreeRelay Profiles</h3>
+                    <p>Request analyzed and matched to the best provider in under 5ms.</p>
+                </div>
+                <div class="step reveal">
+                    <div class="step-number gradient-text">3</div>
+                    <h3>Best Provider Wins</h3>
+                    <p>Optimal provider responds. Auto-failover triggers on any rate limit.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="deploy" class="section">
+        <div class="container">
+            <h2 class="section-title reveal">Three Lines of Code</h2>
+            <div class="code-block reveal">
+                <div class="code-window">
+                    <span class="dot dot-red"></span>
+                    <span class="dot dot-yellow"></span>
+                    <span class="dot dot-green"></span>
+                    <span class="code-filename">example.py</span>
+                </div>
+                <pre><code><span class="tk-kw">import</span> openai
+
+client = openai.<span class="tk-fn">OpenAI</span>(base_url=<span class="tk-str">"http://localhost:8000/v1"</span>, api_key=<span class="tk-str">"any"</span>)
+
+<span class="tk-com"># Auto-route to the best free provider available</span>
+response = client.chat.completions.<span class="tk-fn">create</span>(model=<span class="tk-str">"auto"</span>, messages=[{<span class="tk-str">"role"</span>:<span class="tk-str">"user"</span>,<span class="tk-str">"content"</span>:<span class="tk-str">"Hello!"</span>}])</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <section id="pricing" class="section">
+        <div class="container">
+            <h2 class="section-title reveal">Pricing That Makes Sense</h2>
+            <p class="section-subtitle reveal">Self-host free, forever. Or let us run it for you.</p>
+            <div class="pricing-grid">
+                <div class="glass pricing-card reveal">
+                    <h3>Free</h3>
+                    <div class="price gradient-text">$0<span>/mo</span></div>
+                    <ul class="pricing-features">
+                        <li>✓ Self-hosted</li>
+                        <li>✓ Open source</li>
+                        <li>✓ Unlimited requests</li>
+                        <li>✓ 22+ providers</li>
+                        <li>✓ CLI tool</li>
+                    </ul>
+                    <a href="#deploy" class="btn-secondary">Deploy Now →</a>
+                </div>
+                <div class="glass pricing-card pricing-featured reveal">
+                    <div class="featured-badge">Most Popular</div>
+                    <h3>Pro</h3>
+                    <div class="price gradient-text">$9<span>/mo</span></div>
+                    <ul class="pricing-features">
+                        <li>✓ Hosted cloud</li>
+                        <li>✓ Dashboard UI</li>
+                        <li>✓ Priority support</li>
+                        <li>✓ All free features</li>
+                        <li>✓ Usage analytics</li>
+                    </ul>
+                    <a href="#trial" class="btn-primary">Start Free Trial →</a>
+                </div>
+                <div class="glass pricing-card reveal">
+                    <h3>Enterprise</h3>
+                    <div class="price gradient-text">Custom</div>
+                    <ul class="pricing-features">
+                        <li>✓ Dedicated infra</li>
+                        <li>✓ SLA guarantee</li>
+                        <li>✓ Custom providers</li>
+                        <li>✓ White-label</li>
+                        <li>✓ Onboarding</li>
+                    </ul>
+                    <a href="#contact" class="btn-secondary">Contact Us →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container footer-inner">
+            <div class="footer-brand">⚡ FreeRelay</div>
+            <p class="footer-tagline">Built for developers who hate paying for AI.</p>
+            <div class="footer-links">
+                <a href="https://github.com/freerelay">GitHub</a> •
+                <a href="/docs">Docs</a> •
+                <a href="https://twitter.com/freerelay">Twitter</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+        document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+        const nav = document.getElementById('nav');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
+        });
+    </script>
+</body>
+</html>
