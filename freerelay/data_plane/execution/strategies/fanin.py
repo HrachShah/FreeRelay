@@ -104,6 +104,13 @@ async def execute(
                     if response.choices:
                         merged_content = response.choices[0].message.content or ""
                     total_tokens = response.usage.total_tokens if response.usage else 0
+                if not merged_content:
+                    return StepOutput(
+                        step_id=step.step_id,
+                        status=StepStatus.FAILED,
+                        error="Summarizer returned no content",
+                        latency_ms=(time.monotonic() - start) * 1000,
+                    )
             else:
                 merged_content = combined
                 total_tokens = sum(r.tokens_used for r in collected)
