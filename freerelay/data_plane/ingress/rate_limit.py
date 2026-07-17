@@ -12,6 +12,8 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import redis
+
 if TYPE_CHECKING:
     from redis.asyncio import Redis
 
@@ -135,10 +137,13 @@ class RateLimiter:
         Returns:
             RateLimitResult with allowed status and metadata.
         """
+        if limit < 1:
+            raise ValueError("rate limit must be a positive integer")
+
         if self._redis is not None:
             try:
                 return await self._check_redis(namespace, limit)
-            except Exception:
+            except redis.RedisError:
                 logger.exception("Redis rate limit check failed, using fallback")
                 return self._fallback.check(namespace, limit, self._window)
 
