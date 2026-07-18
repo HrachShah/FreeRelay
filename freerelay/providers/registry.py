@@ -29,7 +29,7 @@ class ProviderRegistry:
     def __init__(self, plugin_dir: Path | None = None) -> None:
         self.plugin_dir = plugin_dir or Path.home() / ".freerelay" / "plugins"
         self._providers: dict[str, type[BaseProvider]] = {}
-        self._loaded_modules: dict[str, str] = {}
+        self._loaded_modules: dict[str, set[str]] = {}
 
     def register(self, provider_cls: type[BaseProvider]) -> None:
         """Register a provider class."""
@@ -72,6 +72,7 @@ class ProviderRegistry:
                     spec.loader.exec_module(module)
 
                     # Look for BaseProvider subclasses
+                    provider_names = set()
                     for attr_name in dir(module):
                         attr = getattr(module, attr_name)
                         if (
@@ -80,6 +81,7 @@ class ProviderRegistry:
                             and attr is not BaseProvider
                         ):
                             self.register(attr)
+                            provider_names.add(attr.name)
                             loaded += 1
                             logger.info(
                                 "Loaded plugin provider: %s from %s",
@@ -87,7 +89,7 @@ class ProviderRegistry:
                                 py_file.name,
                             )
 
-                    self._loaded_modules[module_name] = str(py_file)
+                    self._loaded_modules[module_name] = provider_names
 
             except Exception as e:
                 logger.error("Failed to load plugin %s: %s", py_file.name, e)
@@ -105,8 +107,8 @@ class ProviderRegistry:
         for module_name in list(self._loaded_modules.keys()):
             sys.modules.pop(module_name, None)
             # Also remove plugin-registered providers
-            provider_name = self._loaded_modules[module_name]
-            self._providers.pop(provider_name, None)
+            for provider_name in self._loaded_modules[module_name]:
+                self._providers.pop(provider_name, None)
         self._loaded_modules.clear()
 
         # Re-discover
