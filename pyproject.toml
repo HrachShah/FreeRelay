@@ -21,6 +21,7 @@ dependencies = [
   "rich>=13.7",
   "tiktoken>=0.7",
   "cryptography>=42.0",
+  "orjson>=3.10",
 ]
 
 [project.optional-dependencies]
