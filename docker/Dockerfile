@@ -41,8 +41,12 @@ USER freerelay
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/health', timeout=3)" || exit 1
+ENV PYTHONUNBUFFERED=1
 
-ENTRYPOINT ["python", "-m", "freerelay.cli.main", "start"]
-CMD ["--port", "8000"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import os, httpx; httpx.get(f'http://localhost:{os.environ.get(\"PORT\", 8000)}/health', timeout=3)" || exit 1
+
+# Render (and most PaaS hosts) inject $PORT at runtime and expect the app to
+# bind to it; shell form is required here so the substitution actually runs.
+ENTRYPOINT []
+CMD ["/bin/sh", "-c", "python -m freerelay.cli.main start --port ${PORT:-8000}"]
