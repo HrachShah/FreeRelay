@@ -85,8 +85,15 @@ def detect_pii(text: str) -> list[PIIDetection]:
                 )
             )
 
-    # Sort by position for deterministic replacement order
-    detections.sort(key=lambda d: d.start)
+    # Sort by position and prefer the longest match at the same offset so
+    # overlapping detectors do not produce invalid replacement spans.
+    detections.sort(key=lambda d: (d.start, -(d.end - d.start)))
+    non_overlapping: list[PIIDetection] = []
+    for detection in detections:
+        if non_overlapping and detection.start < non_overlapping[-1].end:
+            continue
+        non_overlapping.append(detection)
+    detections = non_overlapping
     return detections
 
 
@@ -107,12 +114,23 @@ def mask_pii(text: str, detections: list[PIIDetection] | None = None) -> MaskRes
     if detections is None:
         detections = detect_pii(text)
 
+    ordered_detections: list[PIIDetection] = []
+    occupied_until = -1
+    for detection in sorted(
+        detections,
+        key=lambda item: (item.start, -(item.end - item.start), item.pii_type),
+    ):
+        if detection.start < occupied_until:
+            continue
+        ordered_detections.append(detection)
+        occupied_until = detection.end
+
     counters: dict[str, int] = {}
     replacement_map: dict[str, str] = {}
     result = list(text)
 
     # Process in reverse order so indices stay valid
-    for det in reversed(detections):
+    for det in reversed(ordered_detections):
         counters[det.pii_type] = counters.get(det.pii_type, 0) + 1
         idx = counters[det.pii_type]
         placeholder = f"[{det.pii_type}_{idx}]"
@@ -125,7 +143,7 @@ def mask_pii(text: str, detections: list[PIIDetection] | None = None) -> MaskRes
     return MaskResult(
         masked_text="".join(result),
         replacement_map=replacement_map,
-        detections=detections,
+        detections=ordered_detections,
     )
 
 
