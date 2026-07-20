@@ -135,6 +135,11 @@ class RateLimiter:
         Returns:
             RateLimitResult with allowed status and metadata.
         """
+        if limit <= 0:
+            raise ValueError("limit must be greater than zero")
+        if self._window <= 0:
+            raise ValueError("window_seconds must be greater than zero")
+
         if self._redis is not None:
             try:
                 return await self._check_redis(namespace, limit)
