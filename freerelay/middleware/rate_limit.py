@@ -58,7 +58,7 @@ class TokenBucket:
             False if no tokens (request should be rate limited).
         """
         now = time.time()
-        elapsed = now - self.last_refill
+        elapsed = max(0.0, now - self.last_refill)
         self.tokens = min(self.capacity, self.tokens + elapsed * self.rate)
         self.last_refill = now
 
