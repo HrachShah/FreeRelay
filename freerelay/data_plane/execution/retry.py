@@ -45,15 +45,22 @@ class NonRetryableError(Exception):
     pass
 
 
-def classify_error(exc: Exception) -> bool:
+def classify_error(
+    exc: Exception,
+    retryable_codes: set[int] | None = None,
+) -> bool:
     """
     Determine if an exception is retryable.
 
     Returns:
         True if the error should trigger a retry.
     """
+    if retryable_codes is None:
+        retryable_codes = RETRYABLE_STATUS_CODES
     if isinstance(exc, RetryableError):
-        return True
+        if exc.status_code is None:
+            return True
+        return exc.status_code in retryable_codes
 
     if isinstance(exc, NonRetryableError):
         return False
@@ -67,11 +74,13 @@ def classify_error(exc: Exception) -> bool:
     # Check for HTTP status codes in exception attributes
     status_code = getattr(exc, "status_code", None)
     if status_code is not None:
-        return status_code in RETRYABLE_STATUS_CODES
+        return status_code in retryable_codes
 
     # Check exception message for common patterns
     msg = str(exc).lower()
-    return bool(any(pattern in msg for pattern in ("timeout", "connection", "timed out")))
+    return any(
+        pattern in msg for pattern in ("timeout", "connection", "timed out")
+    )
 
 
 @dataclass
@@ -128,7 +137,7 @@ async def retry_with_backoff[T](
         except Exception as exc:
             last_exc = exc
 
-            if not classify_error(exc):
+            if not classify_error(exc, retryable_codes):
                 raise
 
             if attempt >= max_retries:
