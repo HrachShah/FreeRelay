@@ -126,6 +126,12 @@ async def retry_with_backoff[T](
     Raises:
         The last exception if all retries are exhausted.
     """
+    if max_retries < 0:
+        raise ValueError("max_retries must be non-negative")
+    if base_delay < 0:
+        raise ValueError("base_delay must be non-negative")
+    if max_delay < 0:
+        raise ValueError("max_delay must be non-negative")
     if retryable_codes is None:
         retryable_codes = RETRYABLE_STATUS_CODES
 

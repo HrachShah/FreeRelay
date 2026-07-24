@@ -58,3 +58,17 @@ async def test_retry_with_backoff_does_not_retry_unlisted_status_codes() -> None
         )
 
     assert attempts == 1
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"max_retries": -1},
+    {"base_delay": -0.1},
+    {"max_delay": -0.1},
+])
+@pytest.mark.asyncio
+async def test_retry_with_backoff_rejects_negative_timing_values(kwargs: dict[str, float]) -> None:
+    async def call() -> str:
+        return "ok"
+
+    with pytest.raises(ValueError, match="must be non-negative"):
+        await retry_with_backoff(call, **kwargs)
