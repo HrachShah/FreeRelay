@@ -53,6 +53,7 @@ class CircuitBreaker:
         "_state",
         "_failure_timestamps",
         "_open_since",
+        "_probe_in_flight",
         "_lock",
     )
 
@@ -71,6 +72,7 @@ class CircuitBreaker:
         self._state = CircuitState.CLOSED
         self._failure_timestamps: list[float] = []
         self._open_since: float = 0.0
+        self._probe_in_flight = False
         self._lock = asyncio.Lock()
 
     def _check_auto_transition(self) -> CircuitState:
@@ -100,8 +102,10 @@ class CircuitBreaker:
 
             if current == CircuitState.CLOSED:
                 return True
-
-            return current == CircuitState.HALF_OPEN
+            if current == CircuitState.HALF_OPEN and not self._probe_in_flight:
+                self._probe_in_flight = True
+                return True
+            return False
 
     async def record_success(self) -> None:
         """Record a successful request."""
@@ -109,6 +113,7 @@ class CircuitBreaker:
             current = self._check_auto_transition()
             if current == CircuitState.HALF_OPEN:
                 self._state = CircuitState.CLOSED
+                self._probe_in_flight = False
                 self._failure_timestamps.clear()
 
     async def record_failure(self, status_code: int | None = None) -> None:
@@ -127,8 +132,8 @@ class CircuitBreaker:
 
             current = self._check_auto_transition()
             if current == CircuitState.HALF_OPEN:
-                # Probe failed → back to OPEN
                 self._state = CircuitState.OPEN
+                self._probe_in_flight = False
                 self._open_since = now
                 return
 

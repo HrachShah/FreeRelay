@@ -73,6 +73,28 @@ class TestCircuitBreaker:
         assert await breaker.can_execute()
 
     @pytest.mark.asyncio
+    async def test_allows_only_one_half_open_probe(self, breaker: CircuitBreaker) -> None:
+        for _ in range(3):
+            await breaker.record_failure(500)
+        await asyncio.sleep(1.1)
+
+        assert await breaker.can_execute()
+        assert not await breaker.can_execute()
+
+        await breaker.record_success()
+        assert await breaker.can_execute()
+
+    @pytest.mark.asyncio
+    async def test_half_open_failure_releases_probe(self, breaker: CircuitBreaker) -> None:
+        for _ in range(3):
+            await breaker.record_failure(500)
+        await asyncio.sleep(1.1)
+
+        assert await breaker.can_execute()
+        await breaker.record_failure(500)
+        assert not await breaker.can_execute()
+
+    @pytest.mark.asyncio
     async def test_half_open_to_closed_on_success(
         self, breaker: CircuitBreaker
     ) -> None:
