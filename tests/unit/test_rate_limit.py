@@ -22,3 +22,19 @@ def test_rejects_non_positive_limits(
             requests_per_minute=requests_per_minute,
             burst_capacity=burst_capacity,
         )
+
+
+def test_fallback_removes_expired_entries_for_idle_namespaces(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Expired timestamps should be discarded even when the next request is allowed."""
+    from freerelay.data_plane.ingress.rate_limit import _InMemoryWindow
+
+    now = 100.0
+    monkeypatch.setattr("freerelay.data_plane.ingress.rate_limit.time.time", lambda: now)
+    window = _InMemoryWindow()
+    window.check("tenant", limit=2, window=10)
+    now = 111.0
+
+    result = window.check("tenant", limit=2, window=10)
+
+    assert result.allowed
+    assert window._windows["tenant"] == [111.0]

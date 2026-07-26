@@ -67,6 +67,7 @@ class _InMemoryWindow:
 
         timestamps = self._windows.get(namespace, [])
         timestamps = [ts for ts in timestamps if ts > cutoff]
+        self._windows[namespace] = timestamps
 
         if len(timestamps) < limit:
             timestamps.append(now)
