@@ -33,11 +33,15 @@ def summarize_messages(
     Returns:
         List of messages with older ones summarized.
     """
+    if keep_last_n < 0:
+        raise ValueError("keep_last_n must be non-negative")
+    if max_summary_tokens < 1:
+        raise ValueError("max_summary_tokens must be positive")
     if len(messages) <= keep_last_n + 1:
         return messages
 
-    recent = messages[-keep_last_n:]
-    older = messages[:-keep_last_n]
+    recent = messages[-keep_last_n:] if keep_last_n else []
+    older = messages[:-keep_last_n] if keep_last_n else messages
 
     # Build extractive summary
     key_points: list[str] = []
