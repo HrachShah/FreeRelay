@@ -19,7 +19,7 @@ from starlette.responses import Response
 logger = logging.getLogger("freerelay.rate_limit")
 
 # Pre-compiled set of path prefixes to skip rate limiting
-_SKIP_PATHS = frozenset({"/health", "/ready", "/dashboard", "/metrics"})
+_SKIP_PATHS = frozenset({"/v1/health", "/v1/ready", "/v1/dashboard", "/v1/metrics"})
 
 # Maximum number of client buckets to prevent memory exhaustion
 _MAX_BUCKETS = 10_000
@@ -129,7 +129,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Skip health/dashboard/metrics - use frozenset for O(1) lookup
-        if any(path.startswith(p) for p in _SKIP_PATHS):
+        if any(path == p or path.startswith(p + "/") for p in _SKIP_PATHS):
             return await call_next(request)
 
         # Periodic cleanup of stale buckets
