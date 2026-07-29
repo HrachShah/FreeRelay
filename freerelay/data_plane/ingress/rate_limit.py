@@ -8,6 +8,7 @@ In-memory fallback when Redis is unavailable.
 from __future__ import annotations
 
 import logging
+import math
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -72,7 +73,7 @@ class _InMemoryWindow:
             timestamps.append(now)
             self._windows[namespace] = timestamps
             remaining = limit - len(timestamps)
-            reset_ts = int(now + window)
+            reset_ts = math.ceil(now + window)
             return RateLimitResult(
                 allowed=True,
                 remaining=remaining,
@@ -82,7 +83,7 @@ class _InMemoryWindow:
 
         self._windows[namespace] = timestamps
         oldest = min(timestamps) if timestamps else now
-        reset_ts = int(oldest + window)
+        reset_ts = math.ceil(oldest + window)
         return RateLimitResult(
             allowed=False,
             remaining=0,
