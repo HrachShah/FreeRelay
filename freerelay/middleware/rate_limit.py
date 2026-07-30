@@ -83,6 +83,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         requests_per_minute: int = 60,
         burst_capacity: int = 10,
     ) -> None:
+        if requests_per_minute < 1:
+            raise ValueError("requests_per_minute must be at least 1")
+        if burst_capacity < 1:
+            raise ValueError("burst_capacity must be at least 1")
+
         super().__init__(app)  # type: ignore[arg-type]
         self.requests_per_minute = requests_per_minute
         self.burst_capacity = burst_capacity
