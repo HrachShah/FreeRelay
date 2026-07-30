@@ -39,7 +39,7 @@ async def test_similarly_named_endpoint_is_still_rate_limited():
 
 def test_token_bucket_uses_monotonic_time_for_refills(monkeypatch: pytest.MonkeyPatch) -> None:
     wall_clock = iter((100.0, 99.0, 98.0))
-    monotonic_clock = iter((10.0, 10.0, 11.0))
+    monotonic_clock = iter((10.0, 10.0, 10.0, 11.0))
     monkeypatch.setattr("freerelay.middleware.rate_limit.time.time", lambda: next(wall_clock))
     monkeypatch.setattr(
         "freerelay.middleware.rate_limit.time.monotonic",
