@@ -151,17 +151,33 @@ class Executor:
         provider_keys = [(p, k) for p, k, _ in providers]
         circuits = {p.name: c for p, _, c in providers}
         try:
-            response = await hedged_execute(provider_keys, request)
-            # Record success on the circuit breaker of whichever provider won
-            for _name, circuit in circuits.items():
-                await circuit.record_success()
-            return response
+            result = await hedged_execute(provider_keys, request)
         except Exception as e:
             # Record failure on all involved circuit breakers
             for _name, circuit in circuits.items():
                 status = e.status_code if isinstance(e, ProviderError) else None
                 await circuit.record_failure(status)
             raise
+
+        # Only the winning provider's circuit breaker should observe a
+        # success. The loser's provider either timed out, raised, or
+        # completed after the winner — calling record_success on it
+        # would mask the failure that triggered the hedge in the first
+        # place and prevent the circuit breaker from ever tripping on
+        # that provider.
+        winner_circuit = circuits.get(result.winner_name)
+        if winner_circuit is not None:
+            await winner_circuit.record_success()
+        for loser_name in result.loser_names:
+            loser_circuit = circuits.get(loser_name)
+            if loser_circuit is not None:
+                # The loser completed but slower than the winner, so its
+                # response was discarded — not strictly a "failure" but
+                # also not a success the breaker should credit. Record a
+                # non-status failure (None) to nudge the breaker toward
+                # opening without the aggressive weight of a real 5xx.
+                await loser_circuit.record_failure(None)
+        return result.response
 
     async def execute_stream(
         self,
