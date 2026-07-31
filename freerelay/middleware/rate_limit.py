@@ -19,7 +19,7 @@ from starlette.responses import Response
 logger = logging.getLogger("freerelay.rate_limit")
 
 # Pre-compiled set of path prefixes to skip rate limiting
-_SKIP_PATHS = frozenset({"/health", "/ready", "/dashboard", "/metrics"})
+_SKIP_PATHS = frozenset({"/v1/health", "/v1/ready", "/v1/dashboard", "/v1/metrics"})
 
 # Maximum number of client buckets to prevent memory exhaustion
 _MAX_BUCKETS = 10_000
@@ -47,7 +47,7 @@ class TokenBucket:
         self.rate = rate
         self.capacity = capacity
         self.tokens = float(capacity)
-        self.last_refill = time.time()
+        self.last_refill = time.monotonic()
 
     def consume(self) -> bool:
         """
@@ -57,7 +57,7 @@ class TokenBucket:
             True if a token was available (request allowed).
             False if no tokens (request should be rate limited).
         """
-        now = time.time()
+        now = time.monotonic()
         elapsed = now - self.last_refill
         self.tokens = min(self.capacity, self.tokens + elapsed * self.rate)
         self.last_refill = now
@@ -84,6 +84,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         burst_capacity: int = 10,
     ) -> None:
         super().__init__(app)  # type: ignore[arg-type]
+        if requests_per_minute <= 0:
+            raise ValueError("requests_per_minute must be positive")
+        if burst_capacity <= 0:
+            raise ValueError("burst_capacity must be positive")
         self.requests_per_minute = requests_per_minute
         self.burst_capacity = burst_capacity
         self._buckets: OrderedDict[str, TokenBucket] = OrderedDict()
@@ -108,7 +112,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _cleanup_stale_buckets(self) -> None:
         """Remove buckets that haven't been used in over 5 minutes."""
-        now = time.time()
+        now = time.monotonic()
         stale_threshold = 300.0  # 5 minutes
         stale_keys = [
             key
@@ -129,7 +133,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Skip health/dashboard/metrics - use frozenset for O(1) lookup
-        if any(path.startswith(p) for p in _SKIP_PATHS):
+        if any(path == p or path.startswith(p + "/") for p in _SKIP_PATHS):
             return await call_next(request)
 
         # Periodic cleanup of stale buckets
