@@ -84,6 +84,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         burst_capacity: int = 10,
     ) -> None:
         super().__init__(app)  # type: ignore[arg-type]
+        if requests_per_minute <= 0:
+            raise ValueError("requests_per_minute must be positive")
+        if burst_capacity <= 0:
+            raise ValueError("burst_capacity must be positive")
         self.requests_per_minute = requests_per_minute
         self.burst_capacity = burst_capacity
         self._buckets: OrderedDict[str, TokenBucket] = OrderedDict()

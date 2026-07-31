@@ -50,3 +50,14 @@ def test_token_bucket_uses_monotonic_time_for_refills(monkeypatch: pytest.Monkey
     assert bucket.consume()
     assert not bucket.consume()
     assert bucket.consume()
+
+
+def test_rate_limit_settings_must_be_positive():
+    for kwargs, message in (
+        ({"requests_per_minute": 0}, "requests_per_minute must be positive"),
+        ({"requests_per_minute": -1}, "requests_per_minute must be positive"),
+        ({"burst_capacity": 0}, "burst_capacity must be positive"),
+        ({"burst_capacity": -1}, "burst_capacity must be positive"),
+    ):
+        with pytest.raises(ValueError, match=message):
+            RateLimitMiddleware(Mock(), **kwargs)
