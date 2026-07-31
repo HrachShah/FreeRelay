@@ -29,7 +29,10 @@ class ProviderRegistry:
     def __init__(self, plugin_dir: Path | None = None) -> None:
         self.plugin_dir = plugin_dir or Path.home() / ".freerelay" / "plugins"
         self._providers: dict[str, type[BaseProvider]] = {}
-        self._loaded_modules: dict[str, str] = {}
+        # Map each module_name -> set of provider names that module registered.
+        # This lets reload_plugins() look up the actual provider keys (not file
+        # paths) so _providers.pop() removes the right entries.
+        self._loaded_modules: dict[str, set[str]] = {}
 
     def register(self, provider_cls: type[BaseProvider]) -> None:
         """Register a provider class."""
@@ -64,6 +67,7 @@ class ProviderRegistry:
             if module_name in self._loaded_modules:
                 continue
 
+            registered_names: set[str] = set()
             try:
                 spec = importlib.util.spec_from_file_location(module_name, py_file)
                 if spec and spec.loader:
@@ -80,17 +84,24 @@ class ProviderRegistry:
                             and attr is not BaseProvider
                         ):
                             self.register(attr)
+                            registered_names.add(attr.name)  # type: ignore[attr-defined]
                             loaded += 1
                             logger.info(
                                 "Loaded plugin provider: %s from %s",
-                                attr.name,
+                                attr.name,  # type: ignore[attr-defined]
                                 py_file.name,
                             )
 
-                    self._loaded_modules[module_name] = str(py_file)
+                    self._loaded_modules[module_name] = registered_names
 
-            except Exception as e:
+            except ImportError as e:
                 logger.error("Failed to load plugin %s: %s", py_file.name, e)
+            except (SyntaxError, AttributeError) as e:
+                # SyntaxError: the plugin file itself failed to compile
+                # AttributeError: BaseProvider subclass is missing required attrs
+                # Both indicate a broken plugin and should be surfaced loudly
+                # rather than silently logged as a generic "Exception"
+                logger.error("Invalid plugin %s: %s", py_file.name, e)
 
         return loaded
 
@@ -101,12 +112,13 @@ class ProviderRegistry:
         Returns:
             Number of providers after reload.
         """
-        # Remove previously loaded plugin modules
-        for module_name in list(self._loaded_modules.keys()):
+        # Remove previously loaded plugin modules.
+        # Look up provider names by module_name (not by file path) so
+        # _providers.pop() actually removes the right entries.
+        for module_name, provider_names in list(self._loaded_modules.items()):
             sys.modules.pop(module_name, None)
-            # Also remove plugin-registered providers
-            provider_name = self._loaded_modules[module_name]
-            self._providers.pop(provider_name, None)
+            for provider_name in provider_names:
+                self._providers.pop(provider_name, None)
         self._loaded_modules.clear()
 
         # Re-discover
