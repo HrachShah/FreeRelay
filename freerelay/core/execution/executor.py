@@ -156,7 +156,7 @@ class Executor:
             for _name, circuit in circuits.items():
                 await circuit.record_success()
             return response
-        except Exception as e:
+        except (ProviderError, ValueError, TypeError) as e:
             # Record failure on all involved circuit breakers
             for _name, circuit in circuits.items():
                 status = e.status_code if isinstance(e, ProviderError) else None

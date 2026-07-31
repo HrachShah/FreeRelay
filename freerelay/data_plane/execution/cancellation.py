@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+import httpx
+
 logger = logging.getLogger("freerelay.data_plane.cancellation")
 
 
@@ -112,10 +114,11 @@ class CancellableRequest:
             if self._httpx_request is not None and self._httpx_client is not None:
                 try:
                     await self._httpx_client.cancel_request(self._httpx_request)
-                except Exception:
+                except (OSError, httpx.RequestError) as err:
                     logger.debug(
-                        "Failed to cancel httpx request %s",
+                        "Failed to cancel httpx request %s: %s",
                         self._state.request_id,
+                        err,
                     )
 
             # Cancel timeout task
