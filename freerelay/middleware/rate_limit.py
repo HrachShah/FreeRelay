@@ -44,10 +44,15 @@ class TokenBucket:
             rate: Tokens added per second.
             capacity: Maximum tokens (burst capacity).
         """
+        if rate <= 0:
+            raise ValueError("rate must be greater than zero")
+        if capacity <= 0:
+            raise ValueError("capacity must be greater than zero")
+
         self.rate = rate
         self.capacity = capacity
         self.tokens = float(capacity)
-        self.last_refill = time.time()
+        self.last_refill = time.monotonic()
 
     def consume(self) -> bool:
         """
@@ -57,7 +62,7 @@ class TokenBucket:
             True if a token was available (request allowed).
             False if no tokens (request should be rate limited).
         """
-        now = time.time()
+        now = time.monotonic()
         elapsed = now - self.last_refill
         self.tokens = min(self.capacity, self.tokens + elapsed * self.rate)
         self.last_refill = now
@@ -113,7 +118,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _cleanup_stale_buckets(self) -> None:
         """Remove buckets that haven't been used in over 5 minutes."""
-        now = time.time()
+        now = time.monotonic()
         stale_threshold = 300.0  # 5 minutes
         stale_keys = [
             key
