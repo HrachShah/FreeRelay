@@ -7,6 +7,7 @@ Uses in-memory state (Redis-backed in production).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections import OrderedDict
@@ -44,10 +45,15 @@ class TokenBucket:
             rate: Tokens added per second.
             capacity: Maximum tokens (burst capacity).
         """
+        if rate <= 0:
+            raise ValueError("rate must be greater than zero")
+        if capacity <= 0:
+            raise ValueError("capacity must be greater than zero")
+
         self.rate = rate
         self.capacity = capacity
         self.tokens = float(capacity)
-        self.last_refill = time.time()
+        self.last_refill = time.monotonic()
 
     def consume(self) -> bool:
         """
@@ -57,7 +63,7 @@ class TokenBucket:
             True if a token was available (request allowed).
             False if no tokens (request should be rate limited).
         """
-        now = time.time()
+        now = time.monotonic()
         elapsed = now - self.last_refill
         self.tokens = min(self.capacity, self.tokens + elapsed * self.rate)
         self.last_refill = now
@@ -83,12 +89,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         requests_per_minute: int = 60,
         burst_capacity: int = 10,
     ) -> None:
+        if requests_per_minute < 1:
+            raise ValueError("requests_per_minute must be at least 1")
+        if burst_capacity < 1:
+            raise ValueError("burst_capacity must be at least 1")
+
         super().__init__(app)  # type: ignore[arg-type]
         self.requests_per_minute = requests_per_minute
         self.burst_capacity = burst_capacity
         self._buckets: OrderedDict[str, TokenBucket] = OrderedDict()
         self._rate = requests_per_minute / 60.0  # tokens per second
         self._request_count = 0
+        self._state_lock = asyncio.Lock()
 
     def _get_bucket(self, client_ip: str) -> TokenBucket:
         """Get or create a token bucket for a client with LRU eviction."""
@@ -108,7 +120,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _cleanup_stale_buckets(self) -> None:
         """Remove buckets that haven't been used in over 5 minutes."""
-        now = time.time()
+        now = time.monotonic()
         stale_threshold = 300.0  # 5 minutes
         stale_keys = [
             key
@@ -132,17 +144,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(p) for p in _SKIP_PATHS):
             return await call_next(request)
 
-        # Periodic cleanup of stale buckets
-        self._request_count += 1
-        if self._request_count % _CLEANUP_INTERVAL == 0:
-            self._cleanup_stale_buckets()
+        async with self._state_lock:
+            # Periodic cleanup of stale buckets
+            self._request_count += 1
+            if self._request_count % _CLEANUP_INTERVAL == 0:
+                self._cleanup_stale_buckets()
 
-        # Identify by user_id if available (from AuthMiddleware), otherwise IP
-        user_id = getattr(request.state, "user_id", None)
-        client_id = user_id or (request.client.host if request.client else "unknown")
-        bucket = self._get_bucket(client_id)
+            # Identify by user_id if available (from AuthMiddleware), otherwise IP
+            user_id = getattr(request.state, "user_id", None)
+            client_id = user_id or (request.client.host if request.client else "unknown")
+            bucket = self._get_bucket(client_id)
+            allowed = bucket.consume()
 
-        if not bucket.consume():
+        if not allowed:
             logger.warning("Rate limit exceeded for %s", client_id)
             return JSONResponse(
                 status_code=429,
