@@ -7,6 +7,7 @@ Uses in-memory state (Redis-backed in production).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections import OrderedDict
@@ -99,6 +100,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._buckets: OrderedDict[str, TokenBucket] = OrderedDict()
         self._rate = requests_per_minute / 60.0  # tokens per second
         self._request_count = 0
+        self._state_lock = asyncio.Lock()
 
     def _get_bucket(self, client_ip: str) -> TokenBucket:
         """Get or create a token bucket for a client with LRU eviction."""
@@ -142,17 +144,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(p) for p in _SKIP_PATHS):
             return await call_next(request)
 
-        # Periodic cleanup of stale buckets
-        self._request_count += 1
-        if self._request_count % _CLEANUP_INTERVAL == 0:
-            self._cleanup_stale_buckets()
+        async with self._state_lock:
+            # Periodic cleanup of stale buckets
+            self._request_count += 1
+            if self._request_count % _CLEANUP_INTERVAL == 0:
+                self._cleanup_stale_buckets()
 
-        # Identify by user_id if available (from AuthMiddleware), otherwise IP
-        user_id = getattr(request.state, "user_id", None)
-        client_id = user_id or (request.client.host if request.client else "unknown")
-        bucket = self._get_bucket(client_id)
+            # Identify by user_id if available (from AuthMiddleware), otherwise IP
+            user_id = getattr(request.state, "user_id", None)
+            client_id = user_id or (request.client.host if request.client else "unknown")
+            bucket = self._get_bucket(client_id)
+            allowed = bucket.consume()
 
-        if not bucket.consume():
+        if not allowed:
             logger.warning("Rate limit exceeded for %s", client_id)
             return JSONResponse(
                 status_code=429,

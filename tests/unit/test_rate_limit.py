@@ -19,3 +19,25 @@ def test_token_bucket_uses_monotonic_clock_for_refills():
 
         bucket.tokens = 0
         assert bucket.consume()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_requests_share_bucket_atomically():
+    from unittest.mock import AsyncMock, Mock
+
+    from freerelay.middleware.rate_limit import RateLimitMiddleware
+
+    middleware = RateLimitMiddleware(Mock(), requests_per_minute=1, burst_capacity=1)
+    request = Mock()
+    request.url.path = "/v1/chat/completions"
+    request.state.user_id = "tenant"
+    request.client.host = "127.0.0.1"
+    call_next = AsyncMock()
+
+    responses = await __import__("asyncio").gather(
+        middleware.dispatch(request, call_next),
+        middleware.dispatch(request, call_next),
+    )
+
+    assert sum(response.status_code == 429 for response in responses) == 1
+    assert call_next.await_count == 1
