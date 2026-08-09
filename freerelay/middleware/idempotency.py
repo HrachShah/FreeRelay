@@ -67,18 +67,23 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         if not idempotency_key:
             return await call_next(request)
 
+        client_id = getattr(request.state, "user_id", None) or (
+            request.client.host if request.client else "unknown"
+        )
+        cache_key = f"{client_id}:{request.method}:{request.url.path}:{idempotency_key}"
+
         # Periodic cleanup of expired entries
         self._request_count += 1
         if self._request_count % _CLEANUP_INTERVAL == 0:
             self._cleanup_expired()
 
         # Check for cached response - O(1) lookup
-        cached = self._cache.get(idempotency_key)
+        cached = self._cache.get(cache_key)
         if cached is not None:
             cached_ts, cached_body, cached_status = cached
             if time.time() - cached_ts < self.ttl:
                 # Move to end for LRU ordering
-                self._cache.move_to_end(idempotency_key)
+                self._cache.move_to_end(cache_key)
                 logger.info("Idempotency cache hit for key: %s", idempotency_key[:16])
                 return JSONResponse(
                     content=cached_body,
@@ -87,7 +92,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 )
             else:
                 # Entry expired, remove it
-                del self._cache[idempotency_key]
+                del self._cache[cache_key]
 
         # Execute the request
         response = await call_next(request)
@@ -95,13 +100,13 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         # Cache the response for idempotent replays
         # Note: We can't easily read the response body from a StreamingResponse
         # so we only cache JSON responses
-        if hasattr(response, "body"):
+        if 200 <= response.status_code < 300 and hasattr(response, "body"):
             try:
                 body = json.loads(response.body.decode())  # type: ignore[union-attr]
                 # Evict oldest entry if at capacity
                 if len(self._cache) >= _MAX_CACHE_SIZE:
                     self._cache.popitem(last=False)
-                self._cache[idempotency_key] = (time.time(), body, response.status_code)
+                self._cache[cache_key] = (time.time(), body, response.status_code)
             except Exception:
                 pass
 
