@@ -44,3 +44,9 @@ async def test_concurrent_requests_share_bucket_atomically():
 
     assert sum(response.status_code == 429 for response in responses) == 1
     assert call_next.await_count == 1
+
+
+@pytest.mark.parametrize("rate, capacity", [(True, 1), (1, True), (1.5, 1)])
+def test_token_bucket_rejects_wrong_numeric_types(rate, capacity):
+    with pytest.raises((TypeError, ValueError)):
+        TokenBucket(rate, capacity)

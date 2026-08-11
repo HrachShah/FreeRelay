@@ -46,8 +46,12 @@ class TokenBucket:
             rate: Tokens added per second.
             capacity: Maximum tokens (burst capacity).
         """
+        if isinstance(rate, bool) or not isinstance(rate, (int, float)):
+            raise TypeError("rate must be a number")
         if not math.isfinite(rate) or rate <= 0:
             raise ValueError("rate must be a finite number greater than zero")
+        if isinstance(capacity, bool) or not isinstance(capacity, int):
+            raise TypeError("capacity must be an integer")
         if capacity <= 0:
             raise ValueError("capacity must be greater than zero")
 
