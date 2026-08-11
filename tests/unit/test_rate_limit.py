@@ -5,7 +5,10 @@ import pytest
 from freerelay.middleware.rate_limit import TokenBucket
 
 
-@pytest.mark.parametrize("rate, capacity", [(0, 1), (-1, 1), (1, 0), (1, -1)])
+@pytest.mark.parametrize(
+    "rate, capacity",
+    [(0, 1), (-1, 1), (float("nan"), 1), (float("inf"), 1), (1, 0), (1, -1)],
+)
 def test_token_bucket_rejects_non_positive_settings(rate, capacity):
     with pytest.raises(ValueError):
         TokenBucket(rate, capacity)

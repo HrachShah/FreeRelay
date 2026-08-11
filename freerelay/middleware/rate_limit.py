@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import time
 from collections import OrderedDict
 
@@ -45,8 +46,8 @@ class TokenBucket:
             rate: Tokens added per second.
             capacity: Maximum tokens (burst capacity).
         """
-        if rate <= 0:
-            raise ValueError("rate must be greater than zero")
+        if not math.isfinite(rate) or rate <= 0:
+            raise ValueError("rate must be a finite number greater than zero")
         if capacity <= 0:
             raise ValueError("capacity must be greater than zero")
 
